@@ -301,7 +301,7 @@ export function renderRsvp(root, side, onBack) {
 
         coupleTimer = window.setTimeout(() => {
           coupleStage?.classList.add('is-up');
-        }, 5000);
+        }, 2500);
       },
       willClose: () => {
         window.clearTimeout(coupleTimer);
