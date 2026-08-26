@@ -1,0 +1,1175 @@
+/* ============================================================
+   全域樣式與設計變數
+   ============================================================ */
+:root {
+  --color-ink: #2a2622;
+  --color-cream: #faf6ef;
+  --color-cream-deep: #f1e9db;
+  --color-blush: #d9a9a3;
+  --color-blush-deep: #b97b74;
+  --color-gold: #b8925a;
+  --color-green: #39ff88;
+  --color-green-dim: #0c3d24;
+  /* 首頁男方按鈕用的深森林綠：在奶油底色上仍有足夠對比，
+     與動畫中的螢光綠 --color-green 分工（那個只用在深色的 3D 場景裡）。 */
+  --color-forest: #2e6b4c;
+  --color-paper: #f4efe4;
+
+  --font-serif: 'Noto Serif TC', 'Cormorant Garamond', serif;
+  --font-sans: 'Noto Sans TC', sans-serif;
+  --font-mono: 'Share Tech Mono', monospace;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+#app {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh; /* 手機網址列會伸縮，dvh 才是真正可見高度 */
+  width: 100%;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* 頁面淡入淡出容器 */
+.page {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh; /* 手機網址列會伸縮，dvh 才是真正可見高度 */
+  opacity: 0;
+  animation: page-fade-in 0.9s ease forwards;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   Landing Page
+   ============================================================ */
+.landing {
+  min-height: 100vh;
+  min-height: 100dvh; /* 手機網址列會伸縮，dvh 才是真正可見高度 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8vh 6vw;
+  text-align: center;
+  position: relative;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(217, 169, 163, 0.25), transparent 55%),
+    radial-gradient(circle at 80% 75%, rgba(184, 146, 90, 0.18), transparent 55%),
+    linear-gradient(180deg, var(--color-cream) 0%, var(--color-cream-deep) 100%);
+  overflow: hidden;
+}
+
+.landing::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(184, 146, 90, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(184, 146, 90, 0.06) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at 50% 40%, black, transparent 75%);
+}
+
+.landing__ornament {
+  font-family: var(--font-serif);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  color: var(--color-blush-deep);
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
+  margin-bottom: 1.2rem;
+  opacity: 0.85;
+  z-index: 1;
+}
+
+.landing__names {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: clamp(2.6rem, 8vw, 5.2rem);
+  line-height: 1.15;
+  margin: 0 0 0.6rem;
+  color: var(--color-ink);
+  z-index: 1;
+}
+
+.landing__names span.heart {
+  color: var(--color-blush-deep);
+  padding: 0 0.25em;
+  font-size: 0.7em;
+  vertical-align: middle;
+}
+
+.landing__subtitle {
+  font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+  color: #6b6055;
+  margin-bottom: 3.2rem;
+  letter-spacing: 0.05em;
+  z-index: 1;
+}
+
+.landing__date {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  color: var(--color-gold);
+  margin-bottom: 2.4rem;
+  z-index: 1;
+}
+
+.landing__prompt {
+  font-size: 0.95rem;
+  color: #7a6f63;
+  margin-bottom: 1.4rem;
+  z-index: 1;
+}
+
+.landing__buttons {
+  display: flex;
+  gap: 1.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  z-index: 1;
+}
+
+.side-btn {
+  position: relative;
+  min-width: 220px;
+  padding: 1.4rem 2.2rem;
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  background: #fff;
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+  box-shadow: 0 8px 24px rgba(42, 38, 34, 0.08);
+}
+
+.side-btn small {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  opacity: 0.65;
+}
+
+.side-btn:hover,
+.side-btn:focus-visible {
+  transform: translateY(-6px);
+}
+
+/* 男方按鈕與女方按鈕採同一色系（淺色卡片底），
+   僅以文字色區分雙方：男方森林綠、女方玫瑰粉。 */
+.side-btn--groom {
+  color: var(--color-forest);
+  border-color: rgba(46, 107, 76, 0.4);
+  background: linear-gradient(160deg, #fffdfa 0%, var(--color-paper) 100%);
+}
+
+.side-btn--groom small {
+  color: rgba(46, 107, 76, 0.65);
+  font-family: var(--font-mono);
+}
+
+.side-btn--groom:hover,
+.side-btn--groom:focus-visible {
+  box-shadow: 0 0 0 1px rgba(46, 107, 76, 0.5), 0 10px 30px rgba(46, 107, 76, 0.22);
+}
+
+.side-btn--bride {
+  color: var(--color-blush-deep);
+  border-color: rgba(217, 169, 163, 0.5);
+  background: linear-gradient(160deg, #fffdfa 0%, var(--color-paper) 100%);
+}
+
+.side-btn--bride:hover,
+.side-btn--bride:focus-visible {
+  box-shadow: 0 0 0 1px rgba(217, 169, 163, 0.6), 0 10px 30px rgba(217, 169, 163, 0.3);
+}
+
+.landing__footer-hint {
+  margin-top: 2.4rem;
+  font-size: 0.75rem;
+  color: #9a8f83;
+  z-index: 1;
+}
+
+/* ============================================================
+   3D Scene 通用容器
+   ============================================================ */
+.scene-page {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh; /* 3D 動畫要精準填滿可見區域，不能被網址列吃掉 */
+  overflow: hidden;
+  background: #000;
+}
+
+.scene-page canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.scene-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  /* index.html 用了 viewport-fit=cover，畫面會延伸到瀏海與底部指示條下方，
+     因此四邊各再加上安全區域，字幕與略過鈕才不會被切到。 */
+  padding: clamp(1rem, 4vw, 2.5rem);
+  padding-top: calc(clamp(1rem, 4vw, 2.5rem) + env(safe-area-inset-top));
+  padding-bottom: calc(clamp(1rem, 4vw, 2.5rem) + env(safe-area-inset-bottom));
+  padding-left: calc(clamp(1rem, 4vw, 2.5rem) + env(safe-area-inset-left));
+  padding-right: calc(clamp(1rem, 4vw, 2.5rem) + env(safe-area-inset-right));
+  z-index: 5;
+}
+
+.scene-overlay__top,
+.scene-overlay__bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.scene-caption {
+  font-size: clamp(0.9rem, 2vw, 1.3rem);
+  letter-spacing: 0.15em;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.scene-caption.is-visible {
+  opacity: 1;
+}
+
+.scene-page--groom .scene-caption {
+  font-family: var(--font-mono);
+  color: var(--color-green);
+  text-shadow: 0 0 12px rgba(57, 255, 136, 0.6);
+}
+
+.scene-page--bride .scene-caption {
+  font-family: var(--font-serif);
+  color: #fdf6ec;
+  text-shadow: 0 0 14px rgba(0, 0, 0, 0.4);
+}
+
+.scene-skip {
+  pointer-events: auto;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  backdrop-filter: blur(6px);
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.scene-skip:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.scene-page--groom .scene-skip {
+  border-color: rgba(57, 255, 136, 0.5);
+  font-family: var(--font-mono);
+}
+
+.scene-progress {
+  pointer-events: none;
+  height: 2px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.15);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+.scene-progress__bar {
+  height: 100%;
+  width: 0%;
+  transition: width 0.15s linear;
+}
+
+.scene-page--groom .scene-progress__bar {
+  background: var(--color-green);
+  box-shadow: 0 0 8px var(--color-green);
+}
+
+.scene-page--bride .scene-progress__bar {
+  background: var(--color-blush);
+  box-shadow: 0 0 8px var(--color-blush);
+}
+
+.scene-continue {
+  pointer-events: auto;
+  position: absolute;
+  bottom: clamp(2.5rem, 8vh, 4.5rem);
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  padding: 0.9rem 2.4rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  letter-spacing: 0.1em;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  opacity: 0;
+  visibility: hidden;
+  backdrop-filter: blur(8px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.scene-continue.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.scene-page--groom .scene-continue {
+  font-family: var(--font-mono);
+  border-color: rgba(57, 255, 136, 0.6);
+  color: var(--color-green);
+}
+
+.scene-page--groom .scene-continue:hover {
+  background: rgba(57, 255, 136, 0.12);
+}
+
+.scene-page--bride .scene-continue {
+  font-family: var(--font-serif);
+}
+
+.scene-page--bride .scene-continue:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ============================================================
+   Info Page
+   ============================================================ */
+.info {
+  min-height: 100vh;
+  min-height: 100dvh; /* 手機網址列會伸縮，dvh 才是真正可見高度 */
+  background: var(--color-cream);
+}
+
+.info__hero {
+  position: relative;
+  padding: 5rem 6vw 3.5rem;
+  text-align: center;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(217, 169, 163, 0.22), transparent 55%),
+    radial-gradient(circle at 85% 30%, rgba(184, 146, 90, 0.15), transparent 55%),
+    var(--color-cream-deep);
+}
+
+.info__hero-title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  margin: 0 0 0.6rem;
+}
+
+.info__hero-sub {
+  color: #6b6055;
+  margin-bottom: 2.2rem;
+}
+
+.countdown {
+  display: flex;
+  justify-content: center;
+  gap: clamp(0.6rem, 2vw, 1.4rem);
+  flex-wrap: wrap;
+}
+
+.countdown__item {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1rem 1.3rem;
+  min-width: 78px;
+  box-shadow: 0 6px 18px rgba(42, 38, 34, 0.08);
+}
+
+.countdown__num {
+  font-family: var(--font-serif);
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 700;
+  color: var(--color-blush-deep);
+  display: block;
+}
+
+.countdown__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: #8a7f73;
+}
+
+.info__section {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 3.2rem 6vw;
+}
+
+.info__section + .info__section {
+  border-top: 1px solid rgba(184, 146, 90, 0.18);
+}
+
+.section-title {
+  font-family: var(--font-serif);
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  margin: 0 0 1.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.section-title::before {
+  content: '';
+  width: 26px;
+  height: 1.5px;
+  background: var(--color-gold);
+  display: inline-block;
+}
+
+.venue-card {
+  background: #fff;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(42, 38, 34, 0.08);
+}
+
+.venue-card__body {
+  padding: 1.6rem 1.8rem;
+}
+
+.venue-card__name {
+  font-weight: 700;
+  font-size: 1.15rem;
+  margin-bottom: 0.3rem;
+}
+
+.venue-card__addr {
+  color: #6b6055;
+  margin-bottom: 0.8rem;
+}
+
+.venue-card__link {
+  display: inline-block;
+  font-size: 0.85rem;
+  color: var(--color-blush-deep);
+  text-decoration: underline;
+}
+
+.venue-card__map {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  display: block;
+  filter: saturate(0.9);
+}
+
+.schedule-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.schedule-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 1.2rem;
+  background: #fff;
+  padding: 1rem 1.3rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(42, 38, 34, 0.06);
+}
+
+.schedule-time {
+  font-family: var(--font-mono);
+  color: var(--color-blush-deep);
+  font-weight: 700;
+  min-width: 56px;
+}
+
+.schedule-title {
+  font-weight: 700;
+  margin-right: 0.4rem;
+}
+
+.schedule-desc {
+  color: #8a7f73;
+  font-size: 0.9rem;
+}
+
+.contact-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  color: #6b6055;
+  line-height: 1.9;
+}
+
+/* --- RSVP Form --- */
+.rsvp-form {
+  display: grid;
+  gap: 1.1rem;
+  background: #fff;
+  padding: 1.8rem;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(42, 38, 34, 0.08);
+}
+
+.form-row {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.form-row label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #4d453d;
+}
+
+.form-row input[type='text'],
+.form-row input[type='tel'],
+.form-row input[type='number'],
+.form-row textarea,
+.form-row select {
+  border: 1px solid rgba(184, 146, 90, 0.35);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--color-cream);
+}
+
+.form-row textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-row--split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* 大人／小孩／兒童座椅同一排。
+   前兩格是「標籤在上、輸入框在下」，勾選框那格則放一個空標籤佔位，
+   三欄結構一致後高度就由瀏覽器自己算 —— 不需要寫死輸入框高度，
+   日後改字級或 padding 也不會跑掉。 */
+.form-row--attendance {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 1rem;
+}
+
+.form-row--checkbox {
+  grid-template-rows: auto 1fr;
+}
+
+/* 佔位標籤，字級與 .form-row label 一致，高度才會相同 */
+.form-row__label-spacer {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #4d453d;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* 撐滿控制列，內容再置中 → 勾選框剛好對齊左邊輸入框的中央 */
+.form-row--attendance .form-check {
+  height: 100%;
+}
+
+.form-check input[type='checkbox'] {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: #b8925a;
+  cursor: pointer;
+}
+
+.form-note {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: #8a7f73;
+  letter-spacing: 0.02em;
+}
+
+.radio-group {
+  display: flex;
+  gap: 1.4rem;
+  flex-wrap: wrap;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 400;
+  font-size: 0.92rem;
+  color: #4d453d;
+}
+
+.form-submit {
+  margin-top: 0.4rem;
+  padding: 0.9rem 1.4rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--color-blush-deep);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.form-submit:hover {
+  background: #a3665f;
+  transform: translateY(-2px);
+}
+
+/* ============================================================
+   SweetAlert2 —— 套上婚禮的米色／緋色與襯線字體
+   ============================================================ */
+.swal-wedding {
+  border-radius: 20px !important;
+  background: var(--color-cream) !important;
+  padding: 2rem 1.6rem 1.8rem !important;
+  border: 1px solid rgba(184, 146, 90, 0.28);
+  box-shadow: 0 20px 60px rgba(42, 38, 34, 0.22) !important;
+}
+
+/* 去背的新郎新娘從左右兩側跳進來 --------------------------------- */
+.swal-couple {
+  position: relative;
+  height: 210px;
+  margin: 0.2rem 0 0.9rem;
+  /* 起跳位置在畫面外，需要裁掉；上方留白給跳躍的最高點 */
+  overflow: hidden;
+}
+
+.swal-couple img {
+  position: absolute;
+  bottom: 0;
+  height: 175px;
+  width: auto;
+  /* 旋轉以腳底為軸，跳起來才像人而不像在原地打轉 */
+  transform-origin: bottom center;
+  filter: drop-shadow(0 8px 14px rgba(42, 38, 34, 0.22));
+}
+
+/* 兩人內側邊緣各自離中線 10px，落地後是並肩站著、不交疊。
+   兩人上舉的手臂會在同一個高度，靠得太近就會疊在一起。 */
+.swal-couple__bride {
+  right: 50%;
+  margin-right: 10px;
+  animation: couple-jump-in-left 0.78s cubic-bezier(0.25, 0.9, 0.35, 1) 0.08s backwards;
+}
+
+.swal-couple__groom {
+  left: 50%;
+  margin-left: 10px;
+  animation: couple-jump-in-right 0.78s cubic-bezier(0.25, 0.9, 0.35, 1) 0.2s backwards;
+}
+
+/* 幅度刻意收斂：起跳距離、跳躍高度、傾角都比第一版小很多，
+   讀起來是「輕快地走進來順便跳一下」，而不是彈射進場。 */
+@keyframes couple-jump-in-left {
+  0% {
+    transform: translate(-130px, 0) rotate(-4deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  50% {
+    /* 跳躍最高點 */
+    transform: translate(-28px, -12px) rotate(2deg);
+  }
+  78% {
+    transform: translate(3px, 0) rotate(-1deg);
+  }
+  90% {
+    /* 落地後的小彈跳 */
+    transform: translate(-1px, -4px) rotate(0deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 1;
+  }
+}
+
+@keyframes couple-jump-in-right {
+  0% {
+    transform: translate(130px, 0) rotate(4deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(28px, -12px) rotate(-2deg);
+  }
+  78% {
+    transform: translate(-3px, 0) rotate(1deg);
+  }
+  90% {
+    transform: translate(1px, -4px) rotate(0deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 1;
+  }
+}
+
+.swal-couple__caption {
+  margin: 0;
+}
+
+.swal-wedding__title {
+  font-family: var(--font-serif) !important;
+  font-weight: 600 !important;
+  font-size: 1.5rem !important;
+  color: var(--color-ink) !important;
+  padding: 0 !important;
+}
+
+.swal-wedding__text {
+  font-family: var(--font-sans) !important;
+  font-size: 0.95rem !important;
+  line-height: 1.9 !important;
+  color: #6b6055 !important;
+  margin: 0.7rem 0 0 !important;
+}
+
+.swal-wedding__confirm,
+.swal-wedding__cancel {
+  font-family: var(--font-sans) !important;
+  font-size: 0.92rem !important;
+  letter-spacing: 0.04em;
+  border-radius: 999px !important;
+  padding: 0.7rem 1.7rem !important;
+  min-height: 44px; /* 手機觸控目標下限 */
+  box-shadow: none !important;
+}
+
+.swal-wedding__confirm {
+  background: var(--color-blush-deep) !important;
+  color: #fff !important;
+}
+
+.swal-wedding__cancel {
+  background: transparent !important;
+  color: #8a7f73 !important;
+  border: 1px solid rgba(184, 146, 90, 0.4) !important;
+}
+
+@media (max-width: 640px) {
+  .swal-wedding {
+    padding: 1.6rem 1.1rem 1.4rem !important;
+  }
+
+  .swal-wedding__title {
+    font-size: 1.3rem !important;
+  }
+
+  .swal-couple {
+    height: 168px;
+  }
+
+  .swal-couple img {
+    height: 140px;
+  }
+}
+
+/* 開了「減少動態效果」就直接站好，不跳 */
+@media (prefers-reduced-motion: reduce) {
+  .swal-couple__bride,
+  .swal-couple__groom {
+    animation: none;
+  }
+}
+
+/* 原本的 .form-success 行內成功訊息已由 SweetAlert 彈窗取代 */
+
+.form-hint {
+  font-size: 0.78rem;
+  color: #9a8f83;
+  margin-top: -0.4rem;
+}
+
+/* --- Gallery --- */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.9rem;
+}
+
+.gallery__item {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: flex-end;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  box-shadow: 0 6px 16px rgba(42, 38, 34, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.gallery__item:hover {
+  transform: translateY(-4px) scale(1.02);
+}
+
+.gallery__item span {
+  position: relative;
+  padding: 0.6rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.45), transparent);
+  width: 100%;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 16, 14, 0.86);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 6vh 6vw;
+}
+
+.lightbox.is-open {
+  display: flex;
+}
+
+.lightbox__panel {
+  width: min(70vh, 90vw);
+  aspect-ratio: 3 / 4;
+  border-radius: 16px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  color: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.lightbox__panel span {
+  padding: 1rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent);
+  width: 100%;
+}
+
+.lightbox__close {
+  position: absolute;
+  top: -3rem;
+  right: 0;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  border-radius: 999px;
+  width: 40px;
+  height: 40px;
+  font-size: 1.1rem;
+}
+
+.info__footer {
+  text-align: center;
+  padding: 3rem 6vw 4rem;
+  color: #9a8f83;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+}
+
+.notice-banner {
+  max-width: 880px;
+  margin: 1.6rem auto 0;
+  padding: 0.8rem 1.2rem;
+  background: #fff8e6;
+  border: 1px solid #e8d49a;
+  color: #7a6320;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+/* ============================================================
+   RSVP 獨立頁
+   ============================================================ */
+.rsvp-page {
+  background: var(--color-cream);
+  display: flex;
+  flex-direction: column;
+}
+
+.rsvp-page__hero {
+  padding: 3.2rem 6vw 2.4rem;
+  text-align: center;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(217, 169, 163, 0.22), transparent 55%),
+    radial-gradient(circle at 80% 35%, rgba(184, 146, 90, 0.15), transparent 55%),
+    var(--color-cream-deep);
+}
+
+.rsvp-page__back {
+  display: inline-block;
+  margin-bottom: 1.4rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(184, 146, 90, 0.4);
+  border-radius: 999px;
+  background: transparent;
+  color: #6b6055;
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.25s ease;
+}
+
+.rsvp-page__back:hover {
+  background: rgba(184, 146, 90, 0.12);
+}
+
+.rsvp-page__title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: clamp(1.8rem, 4.5vw, 2.6rem);
+  margin: 0 0 0.5rem;
+}
+
+.rsvp-page__sub {
+  color: #6b6055;
+  font-size: 0.92rem;
+  margin: 0;
+}
+
+.rsvp-page__body {
+  flex: 1;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 2.6rem 6vw 3.5rem;
+}
+
+/* 分隔線：把「出席資訊」與「紙本喜帖」兩組問題分開 */
+.form-divider {
+  height: 1px;
+  background: rgba(184, 146, 90, 0.22);
+  margin: 0.6rem 0 0.2rem;
+}
+
+.info__cta-text {
+  color: #6b6055;
+  margin: 0 0 1.4rem;
+  line-height: 1.9;
+}
+
+/* ============================================================
+   RWD — 手機版
+   婚禮邀請函絕大多數是用手機開的，以下以手機為主要使用情境調整。
+   ============================================================ */
+
+/* 觸控裝置沒有真正的 hover：點過之後 :hover 樣式會「黏住」，
+   元素會一直停在位移後的狀態。在沒有 hover 能力的裝置上取消位移。 */
+@media (hover: none) {
+  .side-btn:hover,
+  .scene-skip:hover,
+  .gallery__item:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 640px) {
+  /* 表單：兩欄併回一欄，但數字欄位維持並排比較好填 */
+  .form-row--split {
+    grid-template-columns: 1fr;
+  }
+
+  /* iOS Safari 只要輸入框字級小於 16px，一獲得焦點就會自動放大整頁，
+     使用者每填一格都得手動縮回去。手機上一律用滿 16px。 */
+  .form-row input[type='text'],
+  .form-row input[type='tel'],
+  .form-row input[type='number'],
+  .form-row textarea,
+  .form-row select {
+    font-size: 16px;
+  }
+
+  .info__hero {
+    padding: 3.2rem 5vw 2.4rem;
+  }
+
+  .info__section {
+    padding: 2.4rem 5vw;
+  }
+
+  .schedule-list li {
+    /* 時間與標題改為上下排，長一點的說明才不會被擠成一直條 */
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .scene-overlay__top,
+  .scene-overlay__bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+
+  /* 觸控目標至少 44px，符合行動裝置的可點擊尺寸下限 */
+  .side-btn,
+  .form-submit,
+  .scene-skip,
+  .scene-continue {
+    min-height: 44px;
+  }
+
+  .side-btn {
+    /* 兩個身份按鈕改為整行，單手點按更穩 */
+    width: 100%;
+    min-width: 0;
+  }
+
+  .landing__buttons {
+    width: 100%;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 400px) {
+  /* 極窄機（iPhone SE 等）：大人／小孩／兒童座椅三欄會太擠，
+     勾選框獨立成一行，前兩格維持並排。 */
+  .form-row--attendance {
+    grid-template-columns: 1fr 1fr;
+    row-gap: 0.9rem;
+  }
+
+  .form-row--checkbox {
+    grid-column: 1 / -1;
+    grid-template-rows: auto;
+  }
+
+  /* 獨立成行後就不需要佔位標籤了 */
+  .form-row__label-spacer {
+    display: none;
+  }
+
+  .form-row--attendance .form-check {
+    height: auto;
+  }
+
+  .countdown__item {
+    min-width: 64px;
+    padding: 0.8rem 0.9rem;
+  }
+}
+
+/* 橫放手機：高度很矮，過場動畫的字幕與按鈕容易疊在一起 */
+@media (max-height: 480px) and (orientation: landscape) {
+  .scene-overlay {
+    padding: 0.7rem 1rem;
+  }
+
+  .scene-continue {
+    bottom: 1rem;
+    padding: 0.6rem 1.6rem;
+  }
+}
+
+/* 使用者若在系統開啟「減少動態效果」，關掉頁面轉場與位移動畫。
+   3D 過場本身有「略過動畫」按鈕，這裡不強制停用。 */
+@media (prefers-reduced-motion: reduce) {
+  .page {
+    animation: none;
+    opacity: 1;
+  }
+
+  .side-btn,
+  .gallery__item,
+  .scene-skip {
+    transition: none;
+  }
+}
