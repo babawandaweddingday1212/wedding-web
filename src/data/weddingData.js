@@ -18,12 +18,15 @@ export const weddingData = {
   // 換照片時建議先壓到 1600px 以內再放進 /public/photos/。
   couplePhoto: '/photos/couple.jpg',
 
-  // 送出回覆後彈窗裡「從左右跳出來」的去背人像。
+  // 送出回覆後，會從視窗左下與右下升起的去背半身人像。
   // 由 photos-src/cutout.swift 產生（macOS Vision 內建人像分割，
   // 不需安裝任何模型）：
-  //   swift photos-src/cutout.swift <原圖> 輸出.png <裁切起點比例> <裁切寬度比例>
-  cutoutBride: '/photos/cutout-bride.png',
-  cutoutGroom: '/photos/cutout-groom.png',
+  //   swift photos-src/cutout.swift <原圖> <輸出.png> <水平起點> <寬度> <垂直起點> <高度>
+  // 目前這兩張的參數（比例，垂直以畫面上緣為 0）：
+  //   新娘  0.0  0.478  0.0  0.60
+  //   新郎  0.50 0.50   0.0  0.60
+  halfBride: '/photos/half-bride.png',
+  halfGroom: '/photos/half-groom.png',
 
   // 頁面標題／副標
   title: '俊笙 ♥ 婕瑜',

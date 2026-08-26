@@ -2,6 +2,10 @@
    全域樣式與設計變數
    ============================================================ */
 :root {
+  /* SweetAlert 彈窗寬度。兩側升起的人像寬度由這個值算出，
+     兩者共用同一個來源才不會對不齊。 */
+  --swal-w: min(32rem, 92vw);
+
   --color-ink: #2a2622;
   --color-cream: #faf6ef;
   --color-cream-deep: #f1e9db;
@@ -714,93 +718,48 @@ a {
   box-shadow: 0 20px 60px rgba(42, 38, 34, 0.22) !important;
 }
 
-/* 去背的新郎新娘從左右兩側跳進來 --------------------------------- */
-.swal-couple {
-  position: relative;
-  height: 210px;
-  margin: 0.2rem 0 0.9rem;
-  /* 起跳位置在畫面外，需要裁掉；上方留白給跳躍的最高點 */
+/* 去背半身照從整個視窗的正下方升起 ------------------------------- */
+/* 彈窗寬度自己定死，兩側人像的寬度才能由同一個值算出來，
+   不必去猜 SweetAlert 的預設值。 */
+.swal-wedding {
+  width: var(--swal-w) !important;
+}
+
+.couple-rise {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  /* 起始位置在視窗下方，要裁掉才不會撐出捲軸 */
   overflow: hidden;
 }
 
-.swal-couple img {
+.couple-rise__fig {
   position: absolute;
   bottom: 0;
-  height: 175px;
-  width: auto;
-  /* 旋轉以腳底為軸，跳起來才像人而不像在原地打轉 */
-  transform-origin: bottom center;
-  filter: drop-shadow(0 8px 14px rgba(42, 38, 34, 0.22));
+  /* 頁面邊緣到彈窗邊緣的寬度 */
+  width: calc((100vw - var(--swal-w)) / 2);
+  height: auto;
+  transform: translateY(100%);
+  transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+  filter: drop-shadow(0 -6px 18px rgba(42, 38, 34, 0.25));
 }
 
-/* 兩人內側邊緣各自離中線 10px，落地後是並肩站著、不交疊。
-   兩人上舉的手臂會在同一個高度，靠得太近就會疊在一起。 */
-.swal-couple__bride {
-  right: 50%;
-  margin-right: 10px;
-  animation: couple-jump-in-left 0.78s cubic-bezier(0.25, 0.9, 0.35, 1) 0.08s backwards;
+.couple-rise__fig--left {
+  left: 0;
 }
 
-.swal-couple__groom {
-  left: 50%;
-  margin-left: 10px;
-  animation: couple-jump-in-right 0.78s cubic-bezier(0.25, 0.9, 0.35, 1) 0.2s backwards;
+.couple-rise__fig--right {
+  right: 0;
 }
 
-/* 幅度刻意收斂：起跳距離、跳躍高度、傾角都比第一版小很多，
-   讀起來是「輕快地走進來順便跳一下」，而不是彈射進場。 */
-@keyframes couple-jump-in-left {
-  0% {
-    transform: translate(-130px, 0) rotate(-4deg);
-    opacity: 0;
-  }
-  30% {
-    opacity: 1;
-  }
-  50% {
-    /* 跳躍最高點 */
-    transform: translate(-28px, -12px) rotate(2deg);
-  }
-  78% {
-    transform: translate(3px, 0) rotate(-1deg);
-  }
-  90% {
-    /* 落地後的小彈跳 */
-    transform: translate(-1px, -4px) rotate(0deg);
-  }
-  100% {
-    transform: translate(0, 0) rotate(0);
-    opacity: 1;
-  }
+.couple-rise.is-up .couple-rise__fig {
+  transform: translateY(0);
 }
 
-@keyframes couple-jump-in-right {
-  0% {
-    transform: translate(130px, 0) rotate(4deg);
-    opacity: 0;
-  }
-  30% {
-    opacity: 1;
-  }
-  50% {
-    transform: translate(28px, -12px) rotate(-2deg);
-  }
-  78% {
-    transform: translate(-3px, 0) rotate(1deg);
-  }
-  90% {
-    transform: translate(1px, -4px) rotate(0deg);
-  }
-  100% {
-    transform: translate(0, 0) rotate(0);
-    opacity: 1;
-  }
+/* 一左一右錯開一點點，比同時冒出來自然 */
+.couple-rise.is-up .couple-rise__fig--right {
+  transition-delay: 0.18s;
 }
-
-.swal-couple__caption {
-  margin: 0;
-}
-
 .swal-wedding__title {
   font-family: var(--font-serif) !important;
   font-weight: 600 !important;
@@ -848,20 +807,17 @@ a {
     font-size: 1.3rem !important;
   }
 
-  .swal-couple {
-    height: 168px;
-  }
-
-  .swal-couple img {
-    height: 140px;
+  /* 手機上彈窗幾乎占滿寬度，兩側幾乎沒有空間。
+     改成固定比例，讓兩人從彈窗後面的左下與右下角探出來。 */
+  .couple-rise__fig {
+    width: 42vw;
   }
 }
 
-/* 開了「減少動態效果」就直接站好，不跳 */
+/* 開了「減少動態效果」就直接就定位，不做升起 */
 @media (prefers-reduced-motion: reduce) {
-  .swal-couple__bride,
-  .swal-couple__groom {
-    animation: none;
+  .couple-rise__fig {
+    transition: none;
   }
 }
 

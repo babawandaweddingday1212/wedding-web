@@ -51,14 +51,25 @@ blend.setValue(source, forKey: kCIInputImageKey)
 blend.setValue(mask, forKey: kCIInputMaskImageKey)
 guard var output = blend.outputImage else { exit(5) }
 
-// 可選：依比例裁切出左半 / 右半（這張是兩個人並排）
+// 可選：依比例裁切。
+//   args[3] args[4] = 水平起點 / 寬度比例（這張是兩個人並排，用來切左右）
+//   args[5] args[6] = 垂直起點 / 高度比例，以「畫面上緣」為 0（用來切半身）
 if args.count >= 5, let xFrac = Double(args[3]), let wFrac = Double(args[4]) {
     let full = source.extent
+
+    // CIImage 原點在左下，但用「離上緣多少」來指定裁切比較直覺，這裡做換算
+    var yOrigin = full.origin.y
+    var cropH = full.height
+    if args.count >= 7, let topFrac = Double(args[5]), let hFrac = Double(args[6]) {
+        cropH = full.height * CGFloat(hFrac)
+        yOrigin = full.origin.y + full.height * CGFloat(1.0 - topFrac - hFrac)
+    }
+
     let rect = CGRect(
         x: full.origin.x + full.width * CGFloat(xFrac),
-        y: full.origin.y,
+        y: yOrigin,
         width: full.width * CGFloat(wFrac),
-        height: full.height
+        height: cropH
     )
     output = output.cropped(to: rect)
     // 把裁切後的座標原點移回 (0,0)，否則寫檔會帶著偏移

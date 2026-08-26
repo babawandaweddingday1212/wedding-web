@@ -118,6 +118,11 @@ export function renderRsvp(root, side, onBack) {
   const form = root.querySelector('#rsvp-form');
   const backBtn = root.querySelector('#rsvp-back');
 
+  // 送出成功後升起的去背半身照，以及它的 5 秒計時器。
+  // 放在這一層是為了讓頁面 cleanup 也能收拾（例如彈窗還開著就被導頁）。
+  let coupleStage = null;
+  let coupleTimer = null;
+
   // --- 用餐人數自動對齊 ---
   // 「用餐偏好」若做成單選，兩人同行一葷一素就填不出來。
   // 改成分別填份數，並讓葷食 + 素食恆等於大人 + 小孩 ——
@@ -258,22 +263,11 @@ export function renderRsvp(root, side, onBack) {
     syncMeals('adults', true);
     syncPrinted();
 
-    // 去背的新郎新娘從左右兩側跳進畫面。
-    // 用 Swal 的 html 自訂內容而非內建 imageUrl，才放得下這段動畫。
-    const stage = `
-      <div class="swal-couple" aria-hidden="true">
-        <img class="swal-couple__bride" src="${weddingData.cutoutBride}" alt="" />
-        <img class="swal-couple__groom" src="${weddingData.cutoutGroom}" alt="" />
-      </div>
-    `;
-
     const result = await Swal.fire({
       title: attending ? '感謝您的回覆！' : '謝謝您特地告知',
-      html:
-        stage +
-        (attending
-          ? `<p class="swal-couple__caption">我們已經收到您的資訊<br />期待在 <b>${weddingData.dateDisplay}</b> 與您相見 🎉</p>`
-          : '<p class="swal-couple__caption">雖然這次無法見到您，<br />還是很開心收到您的心意 🤍</p>'),
+      html: attending
+        ? `我們已經收到您的資訊<br />期待在 <b>${weddingData.dateDisplay}</b> 與您相見 🎉`
+        : '雖然這次無法見到您，<br />還是很開心收到您的心意 🤍',
       confirmButtonText: '回到婚禮資訊',
       showCancelButton: true,
       cancelButtonText: '留在這一頁',
@@ -287,6 +281,33 @@ export function renderRsvp(root, side, onBack) {
         confirmButton: 'swal-wedding__confirm',
         cancelButton: 'swal-wedding__cancel',
       },
+      // 兩張去背半身照從整個視窗的正下方升起，分別貼齊左右邊緣。
+      // 它們必須放在彈窗「外面」才能貼到視窗底部，所以掛在 Swal 的
+      // container 上、且插在 popup 之前 —— 這樣層級在遮罩之上、彈窗之下，
+      // 手機上彈窗較寬時也只會從兩側探出來，不會蓋住按鈕。
+      didOpen: () => {
+        const container = Swal.getContainer();
+        const popup = Swal.getPopup();
+        if (!container || !popup) return;
+
+        coupleStage = document.createElement('div');
+        coupleStage.className = 'couple-rise';
+        coupleStage.setAttribute('aria-hidden', 'true');
+        coupleStage.innerHTML = `
+          <img class="couple-rise__fig couple-rise__fig--left" src="${weddingData.halfBride}" alt="" />
+          <img class="couple-rise__fig couple-rise__fig--right" src="${weddingData.halfGroom}" alt="" />
+        `;
+        container.insertBefore(coupleStage, popup);
+
+        coupleTimer = window.setTimeout(() => {
+          coupleStage?.classList.add('is-up');
+        }, 5000);
+      },
+      willClose: () => {
+        window.clearTimeout(coupleTimer);
+        coupleStage?.remove();
+        coupleStage = null;
+      },
     });
 
     if (result.isConfirmed) onBack();
@@ -298,7 +319,10 @@ export function renderRsvp(root, side, onBack) {
 
   return () => {
     // 彈窗開著時若被導頁（例如按了瀏覽器上一頁），要一併關掉，
-    // 否則會殘留在新頁面上
+    // 否則會殘留在新頁面上。計時器與人像也一併收掉，避免關閉後才觸發。
+    window.clearTimeout(coupleTimer);
+    coupleStage?.remove();
+    coupleStage = null;
     Swal.close();
     form.removeEventListener('submit', handleSubmit);
     backBtn.removeEventListener('click', handleBack);
