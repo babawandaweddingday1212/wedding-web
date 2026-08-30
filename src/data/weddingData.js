@@ -89,5 +89,11 @@ export const weddingData = {
 
   // RSVP 表單送出端點（先留空，之後可接 Google 表單 / 後端 API）
   // 範例：'https://script.google.com/macros/s/xxxxx/exec'
-  rsvpEndpoint: '',
+  // Google Apps Script Web App。腳本在 Google 伺服器上以擁有者權限執行，
+  // 把回覆寫進試算表，因此前端不需要任何金鑰。
+  // 這個網址不是機密（它必然會出現在前端 bundle 裡），但也不必張揚 ——
+  // 知道網址的人可以往試算表灌資料。腳本端已擋掉沒有姓名的請求。
+  // 腳本內容見 google-apps-script/rsvp.gs。
+  rsvpEndpoint:
+    'https://script.google.com/macros/s/AKfycbwqgBD9e722t_SJlPs3-_FkdO2-vfmqBqe974hQ_7d1PG0TsZkmikgKdDp0ElhH_7WOgQ/exec',
 };
