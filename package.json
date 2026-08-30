@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/build-ics.mjs && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "album": "node scripts/build-album.mjs"
   },

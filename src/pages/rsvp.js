@@ -1,6 +1,6 @@
 import Swal from 'sweetalert2';
 import { weddingData } from '../data/weddingData.js';
-import { googleCalendarUrl, icsUrl } from '../utils/calendar.js';
+import { googleCalendarUrl } from '../utils/calendar.js';
 
 /**
  * 把回覆送到 Google Apps Script 的 Web App。
@@ -311,19 +311,12 @@ export function renderRsvp(root, side, onBack) {
     const result = await Swal.fire({
       title: attending ? '感謝您的回覆！' : '謝謝您特地告知',
       html: attending
-        ? `我們已經收到您的資訊<br />期待在 <b>${weddingData.dateDisplay}</b> 與您相見 🎉` +
-          // 只有出席的人才需要加行事曆
-          `<div class="swal-cal">
-             <p class="swal-cal__hint">把日期存進行事曆，才不會忘記 📅</p>
-             <div class="swal-cal__row">
-               <a class="swal-cal__btn" href="${googleCalendarUrl()}" target="_blank" rel="noopener">Google 行事曆</a>
-               <a class="swal-cal__btn" href="${icsUrl()}">Apple／其他</a>
-             </div>
-           </div>`
+        ? `我們已經收到您的資訊<br />期待在 <b>${weddingData.dateDisplay}</b> 與您相見 🎉`
         : '雖然這次無法見到您，<br />還是很開心收到您的心意 🤍',
       confirmButtonText: '回到婚禮資訊',
-      showCancelButton: true,
-      cancelButtonText: '留在這一頁',
+      // 無法出席的人不需要加行事曆，那顆按鈕就不顯示
+      showCancelButton: attending,
+      cancelButtonText: '加入行事曆',
       reverseButtons: true,
       // 全部改用自訂 class，才能套上網站的米色／緋色與襯線字體，
       // 不然會是 SweetAlert 預設的藍白配色，跟整體調性不合
@@ -363,7 +356,12 @@ export function renderRsvp(root, side, onBack) {
       },
     });
 
-    if (result.isConfirmed) onBack();
+    if (result.isConfirmed) {
+      onBack();
+    } else if (result.dismiss === Swal.DismissReason.cancel) {
+      // 「加入行事曆」：開新分頁到 Google 行事曆預填好的新增頁
+      window.open(googleCalendarUrl(), '_blank', 'noopener');
+    }
   };
 
   const handleBack = () => onBack();
