@@ -75,19 +75,56 @@ export const weddingData = {
   mapLinkUrl:
     'https://www.google.com/maps/search/?api=1&query=%E4%B8%8A%E6%B5%B7%E9%84%89%E6%9D%91%20%E6%89%BF%E5%BE%B7%E6%9C%AC%E5%AE%B6%20103%E8%87%BA%E5%8C%97%E5%B8%82%E5%A4%A7%E5%90%8C%E5%8D%80%E6%89%BF%E5%BE%B7%E8%B7%AF%E4%B8%80%E6%AE%B52%E8%99%9F7%E6%A8%93',
 
+  // 交通資訊
+  transport: {
+    intro:
+      '本店入口位於承德路一段及華陰街交叉口（皇翔臺北廣場），鄰近台北車站。',
+
+    parking: {
+      note: '於本棟停車可直接折抵',
+      lots: [
+        {
+          name: 'CITY PARKING 城市車旅停車場 皇翔臺北廣場場站（皇翔台汽北）',
+          addr: '臺北市大同區承德路一段 2 號 B1–B5',
+          discount: true,
+        },
+        {
+          name: 'Times 台北地下街停車場 中央入口',
+          addr: '臺北市大同區市民大道一段 100 號 B2',
+        },
+        {
+          name: '壹車房 站前停車場',
+          addr: '臺北市大同區華陰街 89 號',
+        },
+        {
+          name: '廣德利停車場',
+          addr: '臺北市大同區太原路 13-1 號',
+        },
+      ],
+    },
+
+    mrt: [
+      '搭乘淡水信義線或板南線至「台北車站」，前往地下街 Y7 出口出站，步行約 1 分鐘即可到達。',
+      '地下街 Y9 通往連通道，可前往皇翔大樓 B2 搭乘電梯至 7 樓上海鄉村。',
+    ],
+
+    bus: '搭乘 2、215、304 承德、63、756、797、811、林口—台北車站（承德），於「台北車站（承德）」站下車即可到達。',
+
+    // 交通示意圖：把圖片放進 public/photos/ 後填入，例如 asset('photos/transport-map.jpg')。
+    // 留空則不顯示。
+    mapImage: '',
+  },
+
   // 流程
   schedule: [
-    { time: '17:00', title: '賓客報到', desc: '簽名、拍照、入座' },
-    { time: '17:30', title: '證婚儀式', desc: '新人交換誓言與戒指' },
-    { time: '18:00', title: '婚宴開席', desc: '喜宴正式開始' },
-    { time: '20:00', title: '送客合影', desc: '感謝賓客蒞臨' },
+    { time: '17:30', title: '賓客報到', desc: '簽名、入席、拿小禮、留聲機玩起來' },
+    { time: '18:00', title: '婚宴開席', desc: '新人交換誓言與戒指' },
+    { time: '18:30', title: '宴會活動', desc: '來就知道....' },
+    { time: '20:30', title: '送客合影', desc: '一起和我們拍美照！' },
   ],
 
-  // 聯絡資訊
-  contact: {
-    groomFamily: '男方聯絡人：陳先生 0912-345-678',
-    brideFamily: '女方聯絡人：林小姐 0987-654-321',
-  },
+  // 回覆截止日
+  rsvpDeadline: '2026/9/27（日）',
 
   // 婚紗照相簿（示範用佔位圖，可替換成 /photos/xxx.jpg）
   photos: [

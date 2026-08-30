@@ -287,9 +287,8 @@ export function renderRsvp(root, side, onBack) {
         await Swal.fire({
           title: '送出失敗',
           html:
-            '網路似乎有點問題，您的資料還留在表單上。<br />' +
-            '請稍後再按一次送出，或直接聯絡我們：<br />' +
-            `<b>${weddingData.contact.groomFamily}</b><br /><b>${weddingData.contact.brideFamily}</b>`,
+            '網路似乎有點問題，您填的資料都還留在表單上。<br />' +
+            '請確認網路後再按一次「送出回覆」。',
           confirmButtonText: '知道了',
           customClass: {
             popup: 'swal-wedding',

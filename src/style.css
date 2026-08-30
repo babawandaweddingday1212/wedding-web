@@ -571,12 +571,76 @@ a {
   font-size: 0.9rem;
 }
 
-.contact-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+/* --- 交通資訊 --- */
+.transport__intro {
   color: #6b6055;
   line-height: 1.9;
+  margin: 0 0 1.8rem;
+}
+
+.transport__head {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 1.8rem 0 0.8rem;
+  color: var(--color-blush-deep);
+}
+
+.transport__head:first-of-type {
+  margin-top: 0;
+}
+
+.transport__list {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: #6b6055;
+  line-height: 1.95;
+}
+
+.transport__list li + li {
+  margin-top: 0.5rem;
+}
+
+/* 停車場：每一項是「名稱 / 地址」兩行的卡片，地址較長也不會擠在一起 */
+.transport__lots {
+  margin: 0;
+  padding-left: 1.4rem;
+  color: #6b6055;
+}
+
+.transport__lots li {
+  margin-bottom: 0.9rem;
+  line-height: 1.75;
+}
+
+.transport__lot-name {
+  display: block;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.transport__lot-addr {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.transport__badge {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(184, 146, 90, 0.16);
+  border: 1px solid rgba(184, 146, 90, 0.4);
+  color: #8a6a2f;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+}
+
+.transport__map {
+  width: 100%;
+  margin-top: 1.8rem;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(42, 38, 34, 0.1);
 }
 
 /* --- RSVP Form --- */

@@ -75,6 +75,42 @@ export function renderInfo(root, side, onGoRsvp) {
       </section>
 
       <section class="info__section">
+        <h2 class="section-title">交通資訊</h2>
+        <p class="transport__intro">${weddingData.transport.intro}</p>
+
+        <h3 class="transport__head">🚗 停車資訊</h3>
+        <ol class="transport__lots">
+          ${weddingData.transport.parking.lots
+            .map(
+              (lot) => `
+            <li>
+              <span class="transport__lot-name">${lot.name}</span>
+              <span class="transport__lot-addr">${lot.addr}</span>
+              ${lot.discount ? `<span class="transport__badge">${weddingData.transport.parking.note}</span>` : ''}
+            </li>
+          `
+            )
+            .join('')}
+        </ol>
+
+        <h3 class="transport__head">🚇 捷運</h3>
+        <ul class="transport__list">
+          ${weddingData.transport.mrt.map((t) => `<li>${t}</li>`).join('')}
+        </ul>
+
+        <h3 class="transport__head">🚌 公車</h3>
+        <ul class="transport__list">
+          <li>${weddingData.transport.bus}</li>
+        </ul>
+
+        ${
+          weddingData.transport.mapImage
+            ? `<img class="transport__map" src="${weddingData.transport.mapImage}" alt="交通位置示意圖" loading="lazy" />`
+            : ''
+        }
+      </section>
+
+      <section class="info__section">
         <h2 class="section-title">婚禮流程</h2>
         <ul class="schedule-list">
           ${weddingData.schedule
@@ -90,13 +126,6 @@ export function renderInfo(root, side, onGoRsvp) {
         </ul>
       </section>
 
-      <section class="info__section">
-        <h2 class="section-title">聯絡我們</h2>
-        <ul class="contact-list">
-          <li>${weddingData.contact.groomFamily}</li>
-          <li>${weddingData.contact.brideFamily}</li>
-        </ul>
-      </section>
 
       <section class="info__section">
         <h2 class="section-title">婚紗照相簿</h2>
@@ -106,10 +135,10 @@ export function renderInfo(root, side, onGoRsvp) {
       </section>
 
       <section class="info__section">
-        <h2 class="section-title">出席回覆 RSVP</h2>
+        <h2 class="section-title">立即回覆出席</h2>
         <p class="info__cta-text">
-          為了讓我們準備座位與餐點，請撥空完成回覆。
-          若需要紙本喜帖，也可以在表單裡留下寄送地址。
+          為了提供您美好的饗宴，請於 <b>${weddingData.rsvpDeadline}</b> 前撥空完成表單。<br />
+          若需要紙本喜帖，歡迎您在表單裡留下寄送地址，期待我們精美的喜帖。
         </p>
         <button class="form-submit" id="go-rsvp" type="button">前往填寫回覆表單 →</button>
       </section>
