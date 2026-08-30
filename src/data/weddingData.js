@@ -35,18 +35,21 @@ export const weddingData = {
 
   // 主視覺合照 —— 兩段 3D 動畫都會用它：
   // 男方場景把它重建成數位雨粒子影像，女方場景把它印在卡片上。
-  // 換照片時建議先壓到 1600px 以內再放進 /public/photos/。
-  couplePhoto: asset('photos/couple.jpg'),
+  // 原始檔在 photos-src/couple-portrait-original.jpg，
+  // 換照片時建議先壓到 1600px 以內再放進 public/photos/。
+  couplePortrait: asset('photos/couple-portrait.jpg'),
 
   // 送出回覆後，會從視窗左下與右下升起的去背半身人像。
-  // 由 photos-src/cutout.swift 產生（macOS Vision 內建人像分割，
-  // 不需安裝任何模型）：
-  //   swift photos-src/cutout.swift <原圖> <輸出.png> <水平起點> <寬度> <垂直起點> <高度>
-  // 目前這兩張的參數（比例，垂直以畫面上緣為 0）：
+  // 由 photos-src/person-cutout.swift 產生
+  // （macOS Vision 內建人像分割，不需安裝任何模型）：
+  //   swift photos-src/person-cutout.swift <原圖> <輸出.png> \
+  //         <水平起點> <寬度> <垂直起點> <高度>
+  // 這兩張的來源與參數（比例，垂直以畫面上緣為 0）：
+  //   來源  photos-src/couple-with-childhood-photos-original.jpg
   //   新娘  0.0  0.478  0.0  0.60
   //   新郎  0.50 0.50   0.0  0.60
-  halfBride: asset('photos/half-bride.png'),
-  halfGroom: asset('photos/half-groom.png'),
+  brideCutout: asset('photos/bride-cutout.png'),
+  groomCutout: asset('photos/groom-cutout.png'),
 
   // 頁面標題／副標
   title: '俊笙 ♥ 婕瑜',
@@ -56,7 +59,10 @@ export const weddingData = {
   eventName: '俊笙 & 婕瑜 婚禮宴客',
 
   // 日期時間（ISO 格式，含時區）－ 用於倒數計時
+  // 開始／結束時間。結束時間用於加入行事曆的事件長度
+  // （流程最後是 20:30 送客合影，抓到 21:00）。
   dateISO: '2026-12-12T17:30:00+08:00',
+  dateEndISO: '2026-12-12T21:00:00+08:00',
   dateShort,
   dateDisplay: `${dateShort}晚上 17:30 入席`,
 
@@ -110,9 +116,9 @@ export const weddingData = {
 
     bus: '搭乘 2、215、304 承德、63、756、797、811、林口—台北車站（承德），於「台北車站（承德）」站下車即可到達。',
 
-    // 交通示意圖：把圖片放進 public/photos/ 後填入，例如 asset('photos/transport-map.jpg')。
-    // 留空則不顯示。
-    mapImage: '',
+    // 交通示意圖。換圖時放進 public/photos/ 再改這裡即可；留空則不顯示。
+    // 檔名刻意用純英數 —— 中文檔名在網址裡要做百分比編碼，沒必要冒這個險。
+    mapImage: asset('photos/transport-map.png'),
   },
 
   // 流程
@@ -126,17 +132,7 @@ export const weddingData = {
   // 回覆截止日
   rsvpDeadline: '2026/9/27（日）',
 
-  // 婚紗照相簿（示範用佔位圖，可替換成 /photos/xxx.jpg）
-  photos: [
-    { id: 1, caption: '海邊夕陽', color: '#e8c4c4' },
-    { id: 2, caption: '城市街拍', color: '#c4d0e8' },
-    { id: 3, caption: '花園寫真', color: '#cfe8c4' },
-    { id: 4, caption: '教堂剪影', color: '#e8ddc4' },
-    { id: 5, caption: '老宅巷弄', color: '#d8c4e8' },
-    { id: 6, caption: '森林漫步', color: '#c4e8e0' },
-    { id: 7, caption: '手寫喜帖', color: '#e8c4d8' },
-    { id: 8, caption: '對戒特寫', color: '#dce8c4' },
-  ],
+  // 婚紗照相簿的頁面順序見 src/data/albumPages.js
 
   // RSVP 表單送出端點（先留空，之後可接 Google 表單 / 後端 API）
   // 範例：'https://script.google.com/macros/s/xxxxx/exec'

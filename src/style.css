@@ -30,6 +30,13 @@
   box-sizing: border-box;
 }
 
+html {
+  /* 永遠替直向捲軸保留位置。捲軸「出現／消失」會讓可視寬度改變，
+     整頁就會左右跳一下 —— 常見於內容高度動態變化的區塊。
+     不支援的瀏覽器會忽略這行，行為與過去相同。 */
+  scrollbar-gutter: stable;
+}
+
 html,
 body {
   margin: 0;
@@ -434,12 +441,9 @@ a {
   font-family: var(--font-serif);
   font-weight: 600;
   font-size: clamp(2rem, 5vw, 3.2rem);
-  margin: 0 0 0.6rem;
-}
-
-.info__hero-sub {
-  color: #6b6055;
-  margin-bottom: 2.2rem;
+  /* 下方原本是日期副標（已移除，日期在歡迎詞裡就有了），
+     它的 margin 一併接手，倒數計時才不會貼著標題 */
+  margin: 0 0 2.4rem;
 }
 
 .countdown {
@@ -893,87 +897,100 @@ a {
   margin-top: -0.4rem;
 }
 
-/* --- Gallery --- */
-.gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 0.9rem;
-}
-
-.gallery__item {
+/* --- 婚紗照翻頁書 --- */
+.album {
   position: relative;
-  aspect-ratio: 3 / 4;
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
-  border: none;
-  padding: 0;
-  display: flex;
-  align-items: flex-end;
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  box-shadow: 0 6px 16px rgba(42, 38, 34, 0.1);
-  transition: transform 0.3s ease;
-}
-
-.gallery__item:hover {
-  transform: translateY(-4px) scale(1.02);
-}
-
-.gallery__item span {
-  position: relative;
-  padding: 0.6rem;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.45), transparent);
   width: 100%;
-}
-
-.lightbox {
-  position: fixed;
-  inset: 0;
-  background: rgba(20, 16, 14, 0.86);
-  display: none;
+  /* 跨頁展開時是兩頁並排，單頁 420x590 → 跨頁約 1.42:1 */
+  aspect-ratio: 1.42 / 1;
+  /* 翻頁時頁面會 3D 旋轉而暫時溢出容器，把文件撐大、逼出捲軸，
+     捲軸一出現可視寬度就少了十幾 px，整頁跟著左右跳。
+     這裡把溢出裁掉，容器尺寸在翻頁過程中就完全不變。 */
+  overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #efe6d8 0%, #e3d6c4 100%);
+  box-shadow: inset 0 2px 12px rgba(42, 38, 34, 0.12);
+  display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
-  padding: 6vh 6vw;
+  padding: 1.2rem;
 }
 
-.lightbox.is-open {
-  display: flex;
-}
-
-.lightbox__panel {
-  width: min(70vh, 90vw);
-  aspect-ratio: 3 / 4;
-  border-radius: 16px;
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  color: #fff;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-}
-
-.lightbox__panel span {
-  padding: 1rem 1.2rem;
-  font-size: 1rem;
-  font-weight: 700;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent);
+.album__book {
   width: 100%;
+  height: 100%;
 }
 
-.lightbox__close {
-  position: absolute;
-  top: -3rem;
-  right: 0;
-  background: none;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  color: #fff;
+/* page-flip 會把每一頁做成獨立圖層，圖片要填滿整頁 */
+.album-page {
+  background: #fff;
+  overflow: hidden;
+}
+
+.album-page__img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 跨頁的左右半必須填滿整頁才能接得起來 */
+.album-page__img--cover {
+  object-fit: cover;
+}
+
+/* 手機單頁模式下的橫幅照片：完整顯示不裁切，上下留白 */
+/* 跨頁左右半的裁切對齊點：推到外緣，接縫側完整保留 */
+.album-page__img--seam-left {
+  object-position: right center;
+}
+
+.album-page__img--seam-right {
+  object-position: left center;
+}
+
+.album-page__img--contain {
+  object-fit: contain;
+  background: #fff;
+}
+
+.album__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  margin-top: 1rem;
+}
+
+.album__nav {
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
-  width: 40px;
-  height: 40px;
-  font-size: 1.1rem;
+  border: 1px solid rgba(184, 146, 90, 0.45);
+  background: transparent;
+  color: var(--color-blush-deep);
+  font-size: 1.4rem;
+  line-height: 1;
+  transition: background 0.25s ease;
+}
+
+.album__nav:hover {
+  background: rgba(184, 146, 90, 0.12);
+}
+
+.album__counter {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: #8a7f73;
+  min-width: 5.5rem;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  /* 窄螢幕時 page-flip 會自動切成單頁，容器比例跟著改成直式 */
+  .album {
+    aspect-ratio: 0.71 / 1;
+    padding: 0.7rem;
+  }
 }
 
 .info__footer {
@@ -1074,8 +1091,7 @@ a {
    元素會一直停在位移後的狀態。在沒有 hover 能力的裝置上取消位移。 */
 @media (hover: none) {
   .side-btn:hover,
-  .scene-skip:hover,
-  .gallery__item:hover {
+  .scene-skip:hover {
     transform: none;
   }
 }
@@ -1187,8 +1203,46 @@ a {
   }
 
   .side-btn,
-  .gallery__item,
+  .album__fullscreen,
   .scene-skip {
     transition: none;
   }
 }
+
+/* 彈窗裡的「加入行事曆」 */
+.swal-cal {
+  margin-top: 1.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(184, 146, 90, 0.25);
+}
+
+.swal-cal__hint {
+  margin: 0 0 0.7rem;
+  font-size: 0.85rem;
+  color: #8a7f73;
+}
+
+.swal-cal__row {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.swal-cal__btn {
+  display: inline-block;
+  padding: 0.5rem 1.1rem;
+  min-height: 40px;
+  line-height: 1.7;
+  border: 1px solid rgba(184, 146, 90, 0.45);
+  border-radius: 999px;
+  color: var(--color-blush-deep);
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: background 0.25s ease;
+}
+
+.swal-cal__btn:hover {
+  background: rgba(184, 146, 90, 0.12);
+}
+

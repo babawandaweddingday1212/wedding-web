@@ -1,5 +1,6 @@
 import Swal from 'sweetalert2';
 import { weddingData } from '../data/weddingData.js';
+import { googleCalendarUrl, icsUrl } from '../utils/calendar.js';
 
 /**
  * 把回覆送到 Google Apps Script 的 Web App。
@@ -129,7 +130,6 @@ export function renderRsvp(root, side, onBack) {
               rows="2"
               placeholder="例：110 台北市信義區信義路五段 7 號 10 樓"
             ></textarea>
-            <p class="form-note">我們會把紙本喜帖寄到這個地址，請填寫完整郵遞區號與門牌。</p>
           </div>
 
           <div class="form-row">
@@ -138,7 +138,7 @@ export function renderRsvp(root, side, onBack) {
           </div>
 
           <button class="form-submit" type="submit">送出回覆</button>
-          <p class="form-hint">＊此表單目前為前端模擬送出，尚未串接後端。未來可接上 Google 表單或自訂 API。</p>
+          <p class="form-hint">＊請於 ${weddingData.rsvpDeadline} 前完成回覆，方便我們安排座位與餐點。</p>
         </form>
       </div>
 
@@ -151,7 +151,7 @@ export function renderRsvp(root, side, onBack) {
   const form = root.querySelector('#rsvp-form');
   const backBtn = root.querySelector('#rsvp-back');
 
-  // 送出成功後升起的去背半身照，以及它的 5 秒計時器。
+  // 送出成功後升起的去背半身照，以及它的延遲計時器。
   // 放在這一層是為了讓頁面 cleanup 也能收拾（例如彈窗還開著就被導頁）。
   let coupleStage = null;
   let coupleTimer = null;
@@ -311,7 +311,15 @@ export function renderRsvp(root, side, onBack) {
     const result = await Swal.fire({
       title: attending ? '感謝您的回覆！' : '謝謝您特地告知',
       html: attending
-        ? `我們已經收到您的資訊<br />期待在 <b>${weddingData.dateDisplay}</b> 與您相見 🎉`
+        ? `我們已經收到您的資訊<br />期待在 <b>${weddingData.dateDisplay}</b> 與您相見 🎉` +
+          // 只有出席的人才需要加行事曆
+          `<div class="swal-cal">
+             <p class="swal-cal__hint">把日期存進行事曆，才不會忘記 📅</p>
+             <div class="swal-cal__row">
+               <a class="swal-cal__btn" href="${googleCalendarUrl()}" target="_blank" rel="noopener">Google 行事曆</a>
+               <a class="swal-cal__btn" href="${icsUrl()}">Apple／其他</a>
+             </div>
+           </div>`
         : '雖然這次無法見到您，<br />還是很開心收到您的心意 🤍',
       confirmButtonText: '回到婚禮資訊',
       showCancelButton: true,
@@ -339,8 +347,8 @@ export function renderRsvp(root, side, onBack) {
         coupleStage.className = 'couple-rise';
         coupleStage.setAttribute('aria-hidden', 'true');
         coupleStage.innerHTML = `
-          <img class="couple-rise__fig couple-rise__fig--left" src="${weddingData.halfBride}" alt="" />
-          <img class="couple-rise__fig couple-rise__fig--right" src="${weddingData.halfGroom}" alt="" />
+          <img class="couple-rise__fig couple-rise__fig--left" src="${weddingData.brideCutout}" alt="" />
+          <img class="couple-rise__fig couple-rise__fig--right" src="${weddingData.groomCutout}" alt="" />
         `;
         container.insertBefore(coupleStage, popup);
 

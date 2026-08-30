@@ -86,7 +86,7 @@ export function renderScene(root, side, onFinish) {
 
   // 合照必須在建立粒子與卡片貼圖「之前」就緒，所以和場景模組一起等。
   // 載入失敗時以 null 繼續：動畫照常演出，只是少了照片，不會整頁卡住。
-  const loadPhoto = loadImage(weddingData.couplePhoto).catch((err) => {
+  const loadPhoto = loadImage(weddingData.couplePortrait).catch((err) => {
     console.warn(err);
     return null;
   });
