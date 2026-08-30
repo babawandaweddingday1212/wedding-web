@@ -3,10 +3,23 @@
 // ------------------------------------------------------------
 // 之後要換成正式內容時，只需要修改這個檔案即可，
 // 不需要動到頁面或動畫的程式碼。
-// 照片路徑請放在 /public/photos/ 資料夾內，
+// 照片檔案請放在 /public/photos/ 資料夾內，
 // 再把下面 photos 陣列中的 src 換成實際檔名即可
-// （例如 '/photos/wedding-01.jpg'）。
+// （例如 asset('photos/wedding-01.jpg')）。
 // ============================================================
+
+/**
+ * 把 public/ 底下的檔案組成正確的網址。
+ *
+ * 網站部署在 GitHub Pages 時位於子路徑（/wedding-web/），
+ * 直接寫 '/photos/x.jpg' 會被瀏覽器解析成網域根目錄而 404。
+ * Vite 只會替它自己編譯的資源加上 base，字串字面值不會處理，
+ * 所以這裡要自己接上 import.meta.env.BASE_URL
+ * （開發時是 '/'，正式版是 '/wedding-web/'）。
+ *
+ * @param {string} path - 不以斜線開頭的相對路徑
+ */
+const asset = (path) => `${import.meta.env.BASE_URL}${path}`;
 
 export const weddingData = {
   // 新人姓名
@@ -16,7 +29,7 @@ export const weddingData = {
   // 主視覺合照 —— 兩段 3D 動畫都會用它：
   // 男方場景把它重建成數位雨粒子影像，女方場景把它印在卡片上。
   // 換照片時建議先壓到 1600px 以內再放進 /public/photos/。
-  couplePhoto: '/photos/couple.jpg',
+  couplePhoto: asset('photos/couple.jpg'),
 
   // 送出回覆後，會從視窗左下與右下升起的去背半身人像。
   // 由 photos-src/cutout.swift 產生（macOS Vision 內建人像分割，
@@ -25,8 +38,8 @@ export const weddingData = {
   // 目前這兩張的參數（比例，垂直以畫面上緣為 0）：
   //   新娘  0.0  0.478  0.0  0.60
   //   新郎  0.50 0.50   0.0  0.60
-  halfBride: '/photos/half-bride.png',
-  halfGroom: '/photos/half-groom.png',
+  halfBride: asset('photos/half-bride.png'),
+  halfGroom: asset('photos/half-groom.png'),
 
   // 頁面標題／副標
   title: '俊笙 ♥ 婕瑜',
