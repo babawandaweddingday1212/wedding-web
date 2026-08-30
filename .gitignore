@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# 環境變數檔一律不進版控。
+# 注意：這只防止「檔案被提交」，不代表放在裡面的值就安全 ——
+# 任何 VITE_ 開頭的變數都會被編譯進前端 bundle，等同公開。
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
