@@ -27,8 +27,6 @@ export function renderLanding(root, onSelect) {
           <small>BRIDE'S GUEST</small>
         </button>
       </div>
-
-      <p class="landing__footer-hint">點選後將進入專屬 3D 動畫，動畫播放完畢即可查看婚禮資訊</p>
     </section>
   `;
 
