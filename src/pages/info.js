@@ -53,7 +53,7 @@ export function renderInfo(root, side, onGoRsvp) {
           <div class="countdown__item"><span class="countdown__num" data-unit="min">--</span><span class="countdown__label">MIN</span></div>
           <div class="countdown__item"><span class="countdown__num" data-unit="sec">--</span><span class="countdown__label">SEC</span></div>
         </div>
-        <div class="notice-banner">目前網站內容為「示範資料」，正式婚禮資訊確認後將會更新 ✨</div>
+        <p class="info__welcome">${weddingData.welcomeMessage}</p>
       </header>
 
       <section class="info__section">

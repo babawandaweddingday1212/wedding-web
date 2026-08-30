@@ -21,6 +21,13 @@
  */
 const asset = (path) => `${import.meta.env.BASE_URL}${path}`;
 
+/**
+ * 婚禮日期的中文寫法。
+ * 抽出來當單一來源：入席時間與首頁的歡迎詞都由它組出來，
+ * 改日期時只要動這一行（以及下面的 dateISO）。
+ */
+const dateShort = '2026 年 12 月 12 日（星期六）';
+
 export const weddingData = {
   // 新人姓名
   groomName: '俊笙',
@@ -50,16 +57,23 @@ export const weddingData = {
 
   // 日期時間（ISO 格式，含時區）－ 用於倒數計時
   dateISO: '2026-12-12T17:30:00+08:00',
-  dateDisplay: '2026 年 12 月 12 日（星期六）晚上 17:30 入席',
+  dateShort,
+  dateDisplay: `${dateShort}晚上 17:30 入席`,
+
+  // 資訊頁倒數計時下方的一句話
+  welcomeMessage: `歡迎您的到來，請保留${dateShort}這個寶貴的夜晚，一起見證我們的婚禮`,
 
   // 地點
-  venueName: '幸福會館 3 樓 幸福廳',
-  address: '台北市中山區幸福路 100 號',
+  venueName: '上海鄉村 承德本家 7 樓',
+  address: '103 臺北市大同區承德路一段 2 號 7 樓（皇翔臺北廣場）',
 
-  // 地圖嵌入（示範用 Google 地圖搜尋結果，之後可換成正式地址的嵌入連結）
+  // 地圖嵌入與導航連結。
+  // 用 ?q=<查詢字串>&output=embed 這種形式不需要 Google Maps API 金鑰；
+  // 查詢字串同時帶店名與完整地址，定位才會準確。
   mapEmbedSrc:
-    'https://www.google.com/maps?q=%E5%8F%B0%E5%8C%97101&output=embed',
-  mapLinkUrl: 'https://maps.google.com/?q=台北市中山區幸福路100號',
+    'https://www.google.com/maps?q=%E4%B8%8A%E6%B5%B7%E9%84%89%E6%9D%91%20%E6%89%BF%E5%BE%B7%E6%9C%AC%E5%AE%B6%20103%E8%87%BA%E5%8C%97%E5%B8%82%E5%A4%A7%E5%90%8C%E5%8D%80%E6%89%BF%E5%BE%B7%E8%B7%AF%E4%B8%80%E6%AE%B52%E8%99%9F7%E6%A8%93&output=embed',
+  mapLinkUrl:
+    'https://www.google.com/maps/search/?api=1&query=%E4%B8%8A%E6%B5%B7%E9%84%89%E6%9D%91%20%E6%89%BF%E5%BE%B7%E6%9C%AC%E5%AE%B6%20103%E8%87%BA%E5%8C%97%E5%B8%82%E5%A4%A7%E5%90%8C%E5%8D%80%E6%89%BF%E5%BE%B7%E8%B7%AF%E4%B8%80%E6%AE%B52%E8%99%9F7%E6%A8%93',
 
   // 流程
   schedule: [

@@ -920,15 +920,14 @@ a {
   letter-spacing: 0.05em;
 }
 
-.notice-banner {
-  max-width: 880px;
-  margin: 1.6rem auto 0;
-  padding: 0.8rem 1.2rem;
-  background: #fff8e6;
-  border: 1px solid #e8d49a;
-  color: #7a6320;
-  border-radius: 10px;
-  font-size: 0.8rem;
+/* 倒數計時下方的歡迎詞（取代原本的「示範資料」提示橫幅） */
+.info__welcome {
+  max-width: 34rem;
+  margin: 2rem auto 0;
+  color: #6b6055;
+  font-size: clamp(0.9rem, 1.6vw, 1rem);
+  line-height: 2;
+  letter-spacing: 0.03em;
   text-align: center;
 }
 
