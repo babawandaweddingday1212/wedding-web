@@ -2,6 +2,39 @@ import Swal from 'sweetalert2';
 import { weddingData } from '../data/weddingData.js';
 
 /**
+ * 把回覆送到 Google Apps Script 的 Web App。
+ *
+ * ⚠️ Content-Type 一定要是 text/plain，不能用 application/json。
+ * Apps Script 沒有實作 OPTIONS，而 application/json 會讓瀏覽器
+ * 先送一個 CORS 預檢請求 —— 那個預檢會失敗，整筆送出就被擋在
+ * 瀏覽器裡、根本到不了 Google。text/plain 屬於「簡單請求」，
+ * 不觸發預檢；body 一樣是 JSON 字串，Apps Script 端用
+ * e.postData.contents 解析。
+ *
+ * @param {string} endpoint - Apps Script 的 /exec 網址
+ * @param {object} payload
+ * @returns {Promise<boolean>} 是否確定寫入成功
+ */
+async function submitToEndpoint(endpoint, payload) {
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow', // Apps Script 會 302 轉到 googleusercontent.com
+    });
+    if (!res.ok) return false;
+    // 腳本回傳 { ok: true }。解析不出來就當作失敗，
+    // 寧可請賓客重送，也不要讓回覆默默消失。
+    const result = await res.json();
+    return result?.ok === true;
+  } catch (err) {
+    console.warn('RSVP 送出失敗', err);
+    return false;
+  }
+}
+
+/**
  * 渲染獨立的 RSVP 出席回覆頁。
  *
  * 這一頁刻意做成可直接分享的網址（#/rsvp），
@@ -241,18 +274,31 @@ export function renderRsvp(root, side, onBack) {
     if (!form.reportValidity()) return;
 
     const data = Object.fromEntries(new FormData(form).entries());
-    // eslint-disable-next-line no-console
-    console.log('[RSVP 模擬送出]', data);
+    // 未勾選的 checkbox 根本不會出現在 FormData 裡。
+    // 補成明確的 yes/no，試算表的欄位才不會忽有忽無。
+    data.childSeat = childSeatInput.checked ? 'yes' : 'no';
+    data.printedInvite = printedInput.checked ? 'yes' : 'no';
 
     if (weddingData.rsvpEndpoint) {
-      try {
-        await fetch(weddingData.rsvpEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
+      const sent = await submitToEndpoint(weddingData.rsvpEndpoint, data);
+      if (!sent) {
+        // 沒送出去就不能顯示成功，也不能清空表單 ——
+        // 賓客才不會以為已經回覆完成，也不用重打一次
+        await Swal.fire({
+          title: '送出失敗',
+          html:
+            '網路似乎有點問題，您的資料還留在表單上。<br />' +
+            '請稍後再按一次送出，或直接聯絡我們：<br />' +
+            `<b>${weddingData.contact.groomFamily}</b><br /><b>${weddingData.contact.brideFamily}</b>`,
+          confirmButtonText: '知道了',
+          customClass: {
+            popup: 'swal-wedding',
+            title: 'swal-wedding__title',
+            htmlContainer: 'swal-wedding__text',
+            confirmButton: 'swal-wedding__confirm',
+          },
         });
-      } catch (err) {
-        console.warn('RSVP 送出失敗（示範環境可忽略）', err);
+        return;
       }
     }
 
