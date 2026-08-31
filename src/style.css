@@ -109,7 +109,12 @@ a {
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* 內容比視窗高時，置中會讓溢出的部分上下均分，
+     而頂端是捲不到的（標題會被切掉且救不回來）。
+     safe center 在溢出時自動退回靠上對齊；
+     不支援的瀏覽器會忽略第二行，維持原本的置中。 */
   justify-content: center;
+  justify-content: safe center;
   padding: 8vh 6vw;
   text-align: center;
   position: relative;

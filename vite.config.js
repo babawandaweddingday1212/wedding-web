@@ -10,4 +10,18 @@ import { defineConfig } from 'vite';
 // 的 asset()）。
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/wedding-web/' : '/',
+
+  build: {
+    // ⚠️ 一定要設。預設的壓縮目標較新，會把
+    //   @media (max-width: 640px)
+    // 改寫成 Media Queries Level 4 的範圍語法
+    //   @media (width <= 640px)
+    // 那是 Safari 16.4 才支援的寫法 —— 舊版 Safari 會整段忽略，
+    // 導致所有手機版樣式（輸入框 16px 防放大、欄位收合、觸控尺寸）
+    // 全部失效，畫面就跑版了。
+    //
+    // 婚禮網站的賓客手機版本很雜，把目標壓低換取相容性是值得的。
+    cssTarget: ['safari13', 'chrome87', 'firefox78', 'edge88'],
+    target: ['es2020', 'safari13', 'chrome87', 'firefox78', 'edge88'],
+  },
 }));
