@@ -128,7 +128,7 @@ export function renderRsvp(root, side, onBack) {
               id="rsvp-address"
               name="address"
               rows="2"
-              placeholder="例：110 台北市信義區信義路五段 7 號 10 樓"
+              placeholder="例：台北市大同區承德路一段2號7樓"
             ></textarea>
           </div>
 
