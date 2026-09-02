@@ -1,14 +1,40 @@
 import { weddingData } from '../data/weddingData.js';
 import { createParallax } from '../utils/parallax.js';
+import { backdropMarkup } from '../utils/pageBackdrop.js';
+import { countdownMarkup, startCountdown } from '../utils/countdown.js';
 
-function formatCountdownParts(targetDate) {
-  const now = new Date();
-  const diff = Math.max(0, targetDate.getTime() - now.getTime());
-  const day = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hour = Math.floor((diff / (1000 * 60 * 60)) % 24);
-  const min = Math.floor((diff / (1000 * 60)) % 60);
-  const sec = Math.floor((diff / 1000) % 60);
-  return { day, hour, min, sec };
+const asset = (path) => `${import.meta.env.BASE_URL}${path}`;
+
+
+// 交錯照片群組：三張直式照片並排，但各自往下錯開不同距離，
+// 而且飄移係數都不一樣 —— 捲動時三張會慢慢拉開又靠攏，
+// 這個「彼此有一點點速差」就是景深感的來源，比整片背景大幅
+// 滑動含蓄得多，也不會把人臉裁掉。
+//
+// offset 單位是 rem，drift 是視窗高度的倍數（見 utils/parallax.js）。
+const PHOTO_GROUPS = {
+  tunnel: [
+    { file: 'tunnel-03.jpg', offset: 0, drift: 0.075 },
+    { file: 'tunnel-08.jpg', offset: 4, drift: 0.018 },
+    { file: 'tunnel-12.jpg', offset: 1.6, drift: 0.048 },
+  ],
+  huashan: [
+    { file: 'huashan-13.jpg', offset: 3.4, drift: 0.022 },
+    { file: 'huashan-02.jpg', offset: 0, drift: 0.078 },
+    { file: 'huashan-06.jpg', offset: 1.2, drift: 0.045 },
+  ],
+};
+
+function renderPhotoGroup(name) {
+  const items = PHOTO_GROUPS[name]
+    .map(
+      ({ file, offset, drift }) => `
+        <figure class="stagger__item" style="--offset:${offset}rem" data-parallax-drift="${drift}">
+          <img class="stagger__photo" src="${asset(`photos/album/${file}`)}" alt="" loading="lazy" decoding="async" />
+        </figure>`
+    )
+    .join('');
+  return `<section class="stagger stagger--${name}" aria-hidden="true">${items}</section>`;
 }
 
 /**
@@ -22,23 +48,16 @@ export function renderInfo(root, side, onGoRsvp) {
   const target = new Date(weddingData.dateISO);
 
   root.innerHTML = `
+    ${backdropMarkup()}
+
     <section class="page info">
       <header class="info__hero" data-parallax="0.7">
-        <div class="info__hero-bg" data-parallax-layer aria-hidden="true"></div>
+        <div class="hero-photo" data-parallax-layer aria-hidden="true"></div>
         <p class="landing__ornament" style="font-size:1rem; margin-bottom:.8rem;">YOU'RE INVITED</p>
         <h1 class="info__hero-title">${weddingData.eventName}</h1>
-        <div class="countdown" id="countdown">
-          <div class="countdown__item"><span class="countdown__num" data-unit="day">--</span><span class="countdown__label">DAYS</span></div>
-          <div class="countdown__item"><span class="countdown__num" data-unit="hour">--</span><span class="countdown__label">HOURS</span></div>
-          <div class="countdown__item"><span class="countdown__num" data-unit="min">--</span><span class="countdown__label">MIN</span></div>
-          <div class="countdown__item"><span class="countdown__num" data-unit="sec">--</span><span class="countdown__label">SEC</span></div>
-        </div>
-        <p class="info__welcome">${weddingData.welcomeMessage}</p>
+        ${countdownMarkup()}
+        <p class="hero-welcome">${weddingData.welcomeMessage}</p>
       </header>
-
-      <section class="parallax parallax--tunnel" data-parallax="0.7" aria-hidden="true">
-        <div class="parallax__layer" data-parallax-layer></div>
-      </section>
 
       <section class="info__section">
         <h2 class="section-title">婚禮地點</h2>
@@ -57,6 +76,8 @@ export function renderInfo(root, side, onGoRsvp) {
           </div>
         </div>
       </section>
+
+      ${renderPhotoGroup('tunnel')}
 
       <section class="info__section">
         <h2 class="section-title">交通資訊</h2>
@@ -111,9 +132,7 @@ export function renderInfo(root, side, onGoRsvp) {
       </section>
 
 
-      <section class="parallax parallax--alley" data-parallax="0.7" aria-hidden="true">
-        <div class="parallax__layer" data-parallax-layer></div>
-      </section>
+      ${renderPhotoGroup('huashan')}
 
       <section class="info__section">
         <h2 class="section-title">婚紗照相簿</h2>
@@ -144,16 +163,7 @@ export function renderInfo(root, side, onGoRsvp) {
   `;
 
   // --- 倒數計時 ---
-  const countdownEl = root.querySelector('#countdown');
-  const tick = () => {
-    const { day, hour, min, sec } = formatCountdownParts(target);
-    countdownEl.querySelector('[data-unit="day"]').textContent = day;
-    countdownEl.querySelector('[data-unit="hour"]').textContent = String(hour).padStart(2, '0');
-    countdownEl.querySelector('[data-unit="min"]').textContent = String(min).padStart(2, '0');
-    countdownEl.querySelector('[data-unit="sec"]').textContent = String(sec).padStart(2, '0');
-  };
-  tick();
-  const intervalId = setInterval(tick, 1000);
+  const stopCountdown = startCountdown(root, target);
 
   // --- 視差滾動 ---
   const parallax = createParallax(root);
@@ -188,7 +198,7 @@ export function renderInfo(root, side, onGoRsvp) {
 
   return () => {
     cancelled = true;
-    clearInterval(intervalId);
+    stopCountdown();
     prevBtn.removeEventListener('click', handlePrev);
     nextBtn.removeEventListener('click', handleNext);
     flipbook?.destroy();

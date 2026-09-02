@@ -1,6 +1,9 @@
 import Swal from 'sweetalert2';
 import { weddingData } from '../data/weddingData.js';
 import { googleCalendarUrl } from '../utils/calendar.js';
+import { createParallax } from '../utils/parallax.js';
+import { backdropMarkup } from '../utils/pageBackdrop.js';
+import { countdownMarkup, startCountdown } from '../utils/countdown.js';
 
 /**
  * 把回覆送到 Google Apps Script 的 Web App。
@@ -48,11 +51,16 @@ async function submitToEndpoint(endpoint, payload) {
  */
 export function renderRsvp(root, side, onBack) {
   root.innerHTML = `
+    ${backdropMarkup()}
+
     <section class="page rsvp-page">
-      <header class="rsvp-page__hero">
+      <header class="rsvp-page__hero" data-parallax="0.7">
+        <div class="hero-photo" data-parallax-layer aria-hidden="true"></div>
         <button class="rsvp-page__back" id="rsvp-back" type="button">← 返回婚禮資訊</button>
         <h1 class="rsvp-page__title">出席回覆</h1>
         <p class="rsvp-page__sub">${weddingData.title}　${weddingData.dateDisplay}</p>
+        ${countdownMarkup()}
+        <p class="hero-welcome">${weddingData.welcomeMessage}</p>
       </header>
 
       <div class="rsvp-page__body">
@@ -368,7 +376,15 @@ export function renderRsvp(root, side, onBack) {
   form.addEventListener('submit', handleSubmit);
   backBtn.addEventListener('click', handleBack);
 
+  // --- 頁首倒數計時 ---
+  const stopCountdown = startCountdown(root, new Date(weddingData.dateISO));
+
+  // --- 頁面襯底與頁首照片的視差 ---
+  const parallax = createParallax(root);
+
   return () => {
+    stopCountdown();
+    parallax.destroy();
     // 彈窗開著時若被導頁（例如按了瀏覽器上一頁），要一併關掉，
     // 否則會殘留在新頁面上。計時器與人像也一併收掉，避免關閉後才觸發。
     window.clearTimeout(coupleTimer);

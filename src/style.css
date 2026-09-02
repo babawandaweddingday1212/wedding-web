@@ -30,6 +30,13 @@
   box-sizing: border-box;
 }
 
+/* [hidden] 只是瀏覽器預設樣式的 display:none，作者端任何 display 宣告
+   都會蓋過它 —— 例如 .form-row 的 display:grid，就讓「寄送地址」
+   在沒勾「需要紙本喜帖」時照樣顯示出來。補一條作者端規則壓回去。 */
+[hidden] {
+  display: none !important;
+}
+
 html {
   /* 永遠替直向捲軸保留位置。捲軸「出現／消失」會讓可視寬度改變，
      整頁就會左右跳一下 —— 常見於內容高度動態變化的區塊。
@@ -426,7 +433,11 @@ a {
 .info {
   min-height: 100vh;
   min-height: 100dvh; /* 手機網址列會伸縮，dvh 才是真正可見高度 */
-  background: var(--color-cream);
+  /* 刻意不上底色。米色由 body 提供，這裡再鋪一層不透明底色的話，
+     會整片蓋住 .page-wash，襯底就完全看不見。
+     z-index 則是把頁面內容抬到襯底之上（.page 已經是 position:relative）。 */
+  position: relative;
+  z-index: 1;
 }
 
 .info__hero {
@@ -441,7 +452,7 @@ a {
 }
 
 /* 背景照片層。上下各多出 18%，那多出來的高度就是視差可位移的餘裕 */
-.info__hero-bg {
+.hero-photo {
   position: absolute;
   left: 0;
   right: 0;
@@ -457,7 +468,7 @@ a {
 
 /* 淡色遮罩：照片正中央是磚牆，深色文字直接疊上去會讀不清楚。
    用網站既有的米色調，維持整體調性。 */
-.info__hero-bg::after {
+.hero-photo::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -465,7 +476,8 @@ a {
     linear-gradient(180deg, rgba(250, 246, 239, 0.82) 0%, rgba(250, 246, 239, 0.9) 60%, rgba(250, 246, 239, 0.97) 100%);
 }
 
-.info__hero > *:not(.info__hero-bg) {
+.info__hero > *:not(.hero-photo),
+.rsvp-page__hero > *:not(.hero-photo) {
   position: relative;
 }
 
@@ -478,59 +490,154 @@ a {
   margin: 0 0 2.4rem;
 }
 
-/* --- 視差橫幅 --- */
-.parallax {
-  position: relative;
-  height: clamp(340px, 68vh, 700px);
-  overflow: hidden;
-}
-
-/* 背景層上下各多出 10%，那段就是視差可位移的餘裕。
-   餘裕開太大時，被裁掉的上緣會連人臉一起吃掉。 */
-.parallax__layer {
-  position: absolute;
+/* --- 整頁襯底 --- */
+/* 一張極淡的照片鋪在整個視窗後方，捲動時非常緩慢地下沉。
+   目的不是讓人「看到」它，而是讓背景不再是一塊完全靜止的米色 ——
+   往下捲的時候，紙面本身也有一點點呼吸。 */
+.page-wash {
+  position: fixed;
   left: 0;
   right: 0;
-  top: -10%;
-  bottom: -10%;
-  /* 對齊頂端而非置中。橫幅又寬又扁，3:2 的照片以寬度填滿後
-     高度會遠超過窗格，用 center 會從上下各裁掉一大塊 ——
-     而這批照片的人臉都在上半部，置中裁切會直接把臉裁掉。 */
-  background-position: center top;
-  background-size: cover;
-  background-repeat: no-repeat;
+  /* 上下各多出 16vh，那就是可下沉的餘裕（見 utils/parallax.js）。
+     餘裕 ÷ 係數 0.03 ≈ 可捲 4800px，比整頁還長 ——
+     留不夠的話捲到後半段襯底就卡住不動，反而露餡。 */
+  top: -16vh;
+  height: 132vh;
+  /* 不能用 z-index:-1。html 和 body 都上了米色底，body 的背景是
+     一般區塊背景，繪製順序在「負 z-index」之上 —— 襯底會被整片蓋掉。
+     改成 0，再把 .info 抬到 1，襯底就夾在 body 底色與頁面內容之間。 */
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.13;
+  /* 糊得夠重才會讀成「色調」而不是「一張放很淡的照片」。
+     糊得不夠的話認得出人臉，交通資訊那種整段文字疊上去會顯得髒。 */
+  filter: blur(26px);
+  /* 上下兩端淡出。整片均勻蓋一層照片只會讓頁面整體變暗、看起來髒；
+     只留中段有材質、兩端乾淨，才像紙上的暈染。
+     要用遮罩而不是疊一層米色 —— 疊的那層會一起吃到上面的 opacity，
+     等於沒遮到。-webkit- 前綴是給舊版 Safari 的。 */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 24%, #000 76%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 24%, #000 76%, transparent 100%);
   will-change: transform;
 }
 
-/* 上下各一道與頁面同色的漸層，讓橫幅與前後區塊自然融合，
-   而不是硬生生插進一張圖 */
-.parallax::before,
-.parallax::after {
-  content: '';
+/* 三個色調各一層，濃度由 JS 依整頁進度交叉淡入（見 utils/parallax.js）。
+   起始值給 0，還沒跑第一次計算前不會三張一起疊出一片濁色。 */
+.page-wash__layer {
   position: absolute;
+  inset: 0;
+  opacity: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* 第一層預設就是亮的。開了「減少動態效果」時 JS 完全不跑，
+   三層都留在 0 的話背景會退回一片死米色 —— 靜止的襯底還是要有。 */
+.page-wash__layer:first-child {
+  opacity: 1;
+}
+
+/* --- 背景花紋 --- */
+/* 鋪滿整個視窗、固定不動，也不做任何位移。
+   捲動時會變的是底下 .page-wash 的色調，花紋本身站著不動 ——
+   這樣讀起來才是「背景在變」，而不是「背景跟著捲」。 */
+.page-pattern {
+  position: fixed;
+  top: 0;
   left: 0;
   right: 0;
-  height: 5%;
-  z-index: 1;
+  /* 花紋以 1/4 速度往上飄（見 data-parallax-slow），整頁大約可捲
+     5200px，所以最多會往上跑 1300px —— 高度要多留這麼多，
+     捲到底才不會露出下緣。 */
+  height: calc(100vh + 1400px);
+  /* 和 .page-wash 同層（都是 0），靠 DOM 順序疊在色調之上；
+     .info 是 1，所有內容都在花紋前面。 */
+  z-index: 0;
   pointer-events: none;
+  /* 起始為 0：首屏是頁首大照片，再疊花紋會太吵。
+     濃度由 JS 依捲動距離推上去（見 data-parallax-fade）。 */
+  opacity: 0;
+
+  /* 三個圖案各自獨立一層，網格週期刻意都不一樣 ——
+     疊起來之後整體要到三者的最小公倍數才會重複，
+     所以看不出是規律的方陣。
+     四周的留白是各檔案 viewBox 自己帶的：background-size 用的是
+     meet 模式，一定會有一軸貼齊，光調尺寸排不出四周都有的間距。 */
+  background-image:
+    url('/photos/background/whale.svg'),
+    url('/photos/background/cattail.svg'),
+    url('/photos/background/lily.svg');
+  background-position: 0 0, 420px 300px, 700px 640px;
+  background-size: 1150px 840px, 980px 891px, 1040px 1040px;
+  background-repeat: repeat;
 }
 
-.parallax::before {
-  top: 0;
-  background: linear-gradient(180deg, var(--color-cream) 0%, transparent 100%);
+/* 開了「減少動態效果」時 JS 完全不跑，花紋會永遠停在 0。
+   這種情況給一個固定濃度，至少背景不是一片空白米色。 */
+@media (prefers-reduced-motion: reduce) {
+  .page-pattern {
+    opacity: 0.13;
+  }
 }
 
-.parallax::after {
-  bottom: 0;
-  background: linear-gradient(0deg, var(--color-cream) 0%, transparent 100%);
+/* --- 交錯照片群組 --- */
+/* 取代原本的滿版橫幅。三張直式照片並排、往下錯開不同距離，
+   每張再各自以不同速度飄移，捲動時彼此會慢慢拉開又靠攏。
+   比整片背景大幅滑動含蓄，而且照片是完整的，不會裁到人臉。 */
+.stagger {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(0.7rem, 2.2vw, 1.5rem);
+  max-width: 1180px;
+  margin: clamp(3rem, 8vw, 6rem) auto;
+  padding: 0 clamp(1.2rem, 4vw, 2rem);
+  /* 錯開最多的那張會往下超出，補回等量的空間，
+     否則會壓到下一個區塊的標題 */
+  padding-bottom: clamp(3rem, 7vw, 5rem);
 }
 
-.parallax--tunnel .parallax__layer {
-  background-image: url('/photos/parallax-tunnel.jpg');
+.stagger__item {
+  margin: var(--offset, 0) 0 0;
+  will-change: transform;
 }
 
-.parallax--alley .parallax__layer {
-  background-image: url('/photos/parallax-brick-alley.jpg');
+.stagger__photo {
+  width: 100%;
+  height: auto;
+  border-radius: 2px;
+  /* 陰影壓得很低很淡，讓照片像貼在紙上而不是浮在畫面前 */
+  box-shadow: 0 18px 34px -24px rgba(60, 42, 28, 0.55);
+}
+
+@media (max-width: 640px) {
+  /* 手機上三欄每欄只剩 100px 出頭，人臉小到看不出是誰。
+     改成兩欄，第三張純粹是裝飾（整組都 aria-hidden），直接收掉。 */
+  .stagger {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* 照片變小了，錯開的距離要跟著縮，不然兩張看起來像沒對齊的失誤 */
+  .stagger__item {
+    margin-top: calc(var(--offset, 0px) * 0.55);
+  }
+
+  /* 交叉淡入時濃度每幀都在變，模糊也得每幀重算一次。
+     手機畫面小，糊 18px 看起來已經一樣是色塊，但便宜得多。 */
+  .page-wash {
+    filter: blur(18px);
+  }
+
+  /* 花紋整組縮到約 55%，不然一隻鯨魚就超過手機寬度，
+     看到的只會是一段看不出是什麼的線條 */
+  .page-pattern {
+    background-position: 0 0, 230px 165px, 385px 350px;
+    background-size: 630px 460px, 540px 490px, 570px 570px;
+  }
+
+  .stagger__item:nth-child(3) {
+    display: none;
+  }
 }
 
 .countdown {
@@ -1089,7 +1196,7 @@ a {
 }
 
 /* 倒數計時下方的歡迎詞（取代原本的「示範資料」提示橫幅） */
-.info__welcome {
+.hero-welcome {
   max-width: 34rem;
   margin: 2rem auto 0;
   color: #6b6055;
@@ -1103,22 +1210,35 @@ a {
    RSVP 獨立頁
    ============================================================ */
 .rsvp-page {
-  background: var(--color-cream);
+  /* 刻意不上底色 —— 不透明底色會整片蓋住 .page-wash（見資訊頁的說明）。
+     z-index 則是把內容抬到襯底之上。 */
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
 }
 
 .rsvp-page__hero {
-  padding: 3.2rem 6vw 2.4rem;
+  position: relative;
+  /* 頁首照片比容器高，超出的部分要裁掉 */
+  overflow: hidden;
+  /* 內容要疊在背景層之上 */
+  isolation: isolate;
+  /* 給足高度，照片才看得出是照片。太矮的話 cover 之後
+     只會露出磚牆最上緣那一條，看不到人。 */
+  min-height: 38vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 3.2rem 6vw 2.6rem;
   text-align: center;
-  background:
-    radial-gradient(circle at 20% 15%, rgba(217, 169, 163, 0.22), transparent 55%),
-    radial-gradient(circle at 80% 35%, rgba(184, 146, 90, 0.15), transparent 55%),
-    var(--color-cream-deep);
+  background: var(--color-cream-deep);
 }
 
 .rsvp-page__back {
-  display: inline-block;
+  /* 頁首改成 flex 直排之後，inline-block 會被拉滿整行，
+     藥丸形狀就沒了 —— 要自己置中。 */
+  align-self: center;
   margin-bottom: 1.4rem;
   padding: 0.5rem 1rem;
   border: 1px solid rgba(184, 146, 90, 0.4);
