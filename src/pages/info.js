@@ -1,4 +1,5 @@
 import { weddingData } from '../data/weddingData.js';
+import { createParallax } from '../utils/parallax.js';
 
 function formatCountdownParts(targetDate) {
   const now = new Date();
@@ -22,7 +23,8 @@ export function renderInfo(root, side, onGoRsvp) {
 
   root.innerHTML = `
     <section class="page info">
-      <header class="info__hero">
+      <header class="info__hero" data-parallax="0.7">
+        <div class="info__hero-bg" data-parallax-layer aria-hidden="true"></div>
         <p class="landing__ornament" style="font-size:1rem; margin-bottom:.8rem;">YOU'RE INVITED</p>
         <h1 class="info__hero-title">${weddingData.eventName}</h1>
         <div class="countdown" id="countdown">
@@ -33,6 +35,10 @@ export function renderInfo(root, side, onGoRsvp) {
         </div>
         <p class="info__welcome">${weddingData.welcomeMessage}</p>
       </header>
+
+      <section class="parallax parallax--tunnel" data-parallax="0.7" aria-hidden="true">
+        <div class="parallax__layer" data-parallax-layer></div>
+      </section>
 
       <section class="info__section">
         <h2 class="section-title">婚禮地點</h2>
@@ -105,6 +111,10 @@ export function renderInfo(root, side, onGoRsvp) {
       </section>
 
 
+      <section class="parallax parallax--alley" data-parallax="0.7" aria-hidden="true">
+        <div class="parallax__layer" data-parallax-layer></div>
+      </section>
+
       <section class="info__section">
         <h2 class="section-title">婚紗照相簿</h2>
         <div class="album">
@@ -145,6 +155,9 @@ export function renderInfo(root, side, onGoRsvp) {
   tick();
   const intervalId = setInterval(tick, 1000);
 
+  // --- 視差滾動 ---
+  const parallax = createParallax(root);
+
   // --- 婚紗照翻頁書 ---
   // 用動態 import 拆成獨立 chunk：page-flip 有 44KB，
   // 沒看到相簿的訪客不必為它付出載入成本。
@@ -179,6 +192,7 @@ export function renderInfo(root, side, onGoRsvp) {
     prevBtn.removeEventListener('click', handlePrev);
     nextBtn.removeEventListener('click', handleNext);
     flipbook?.destroy();
+    parallax.destroy();
     goRsvpBtn.removeEventListener('click', handleGoRsvp);
   };
 }

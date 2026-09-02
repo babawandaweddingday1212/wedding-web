@@ -433,10 +433,40 @@ a {
   position: relative;
   padding: 5rem 6vw 3.5rem;
   text-align: center;
+  background: var(--color-cream-deep);
+  /* 視差層比容器高，超出的部分要裁掉 */
+  overflow: hidden;
+  /* 內容要疊在背景層之上 */
+  isolation: isolate;
+}
+
+/* 背景照片層。上下各多出 18%，那多出來的高度就是視差可位移的餘裕 */
+.info__hero-bg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -14%;
+  bottom: -14%;
+  z-index: -1;
+  /* 對齊頂端而非置中。這張照片人臉在上半部，而背景層比 hero 高、
+     上下超出的部分會被裁掉 —— 兩層裁切疊加後，用 center 會讓人臉
+     正好落在 hero 上緣之外，變成只看到半張臉。 */
+  background: url('/photos/parallax-brick-wall.jpg') center top / cover no-repeat;
+  will-change: transform;
+}
+
+/* 淡色遮罩：照片正中央是磚牆，深色文字直接疊上去會讀不清楚。
+   用網站既有的米色調，維持整體調性。 */
+.info__hero-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
   background:
-    radial-gradient(circle at 15% 10%, rgba(217, 169, 163, 0.22), transparent 55%),
-    radial-gradient(circle at 85% 30%, rgba(184, 146, 90, 0.15), transparent 55%),
-    var(--color-cream-deep);
+    linear-gradient(180deg, rgba(250, 246, 239, 0.82) 0%, rgba(250, 246, 239, 0.9) 60%, rgba(250, 246, 239, 0.97) 100%);
+}
+
+.info__hero > *:not(.info__hero-bg) {
+  position: relative;
 }
 
 .info__hero-title {
@@ -446,6 +476,61 @@ a {
   /* 下方原本是日期副標（已移除，日期在歡迎詞裡就有了），
      它的 margin 一併接手，倒數計時才不會貼著標題 */
   margin: 0 0 2.4rem;
+}
+
+/* --- 視差橫幅 --- */
+.parallax {
+  position: relative;
+  height: clamp(340px, 68vh, 700px);
+  overflow: hidden;
+}
+
+/* 背景層上下各多出 10%，那段就是視差可位移的餘裕。
+   餘裕開太大時，被裁掉的上緣會連人臉一起吃掉。 */
+.parallax__layer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -10%;
+  bottom: -10%;
+  /* 對齊頂端而非置中。橫幅又寬又扁，3:2 的照片以寬度填滿後
+     高度會遠超過窗格，用 center 會從上下各裁掉一大塊 ——
+     而這批照片的人臉都在上半部，置中裁切會直接把臉裁掉。 */
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+  will-change: transform;
+}
+
+/* 上下各一道與頁面同色的漸層，讓橫幅與前後區塊自然融合，
+   而不是硬生生插進一張圖 */
+.parallax::before,
+.parallax::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 5%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.parallax::before {
+  top: 0;
+  background: linear-gradient(180deg, var(--color-cream) 0%, transparent 100%);
+}
+
+.parallax::after {
+  bottom: 0;
+  background: linear-gradient(0deg, var(--color-cream) 0%, transparent 100%);
+}
+
+.parallax--tunnel .parallax__layer {
+  background-image: url('/photos/parallax-tunnel.jpg');
+}
+
+.parallax--alley .parallax__layer {
+  background-image: url('/photos/parallax-brick-alley.jpg');
 }
 
 .countdown {
