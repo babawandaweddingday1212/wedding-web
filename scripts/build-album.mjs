@@ -22,6 +22,9 @@ const MANIFEST = 'src/data/albumPages.js';
 /** 分組顯示順序：飯店 → 華山 → 棚拍（紅、白）→ 隧道 */
 const GROUP_ORDER = ['hotel', 'huashan', 'studio-red', 'studio-white', 'tunnel'];
 
+/** 相簿最前面的精選照片，依序排成第一個桌機跨頁 */
+const FEATURED_PAGES = ['hotel-01.jpg', 'hotel-04.jpg'];
+
 const PAGE_LONG_EDGE = 900; // 單頁輸出的長邊
 const QUALITY = 78;
 
@@ -50,6 +53,11 @@ const all = fs
   .filter((f) => f.toLowerCase().endsWith('.jpg'))
   .sort();
 
+const missingFeatured = FEATURED_PAGES.filter((file) => !all.includes(file));
+if (missingFeatured.length) {
+  throw new Error(`找不到首頁精選照片：${missingFeatured.join(', ')}`);
+}
+
 // 依分組整理，組內維持檔名順序
 const grouped = GROUP_ORDER.map((g) => ({
   group: g,
@@ -77,8 +85,19 @@ for (const { group, files } of grouped) {
     return { file: f, wide: w > h };
   });
 
-  const portraits = items.filter((i) => !i.wide);
-  const wides = items.filter((i) => i.wide);
+  const featured = FEATURED_PAGES
+    .map((file) => items.find((item) => item.file === file))
+    .filter(Boolean);
+  for (const item of featured) {
+    if (item.wide) throw new Error(`首頁精選照片必須是直幅：${item.file}`);
+    spreadPages.push({ f: item.file, fit: 'cover' });
+    singlePages.push({ f: item.file, fit: 'cover' });
+    singleCount++;
+  }
+
+  const remaining = items.filter((item) => !FEATURED_PAGES.includes(item.file));
+  const portraits = remaining.filter((i) => !i.wide);
+  const wides = remaining.filter((i) => i.wide);
   let pi = 0;
   let wi = 0;
 

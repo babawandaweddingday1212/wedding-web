@@ -6,6 +6,8 @@
 // albumSingle — 手機單頁模式：橫幅維持完整一張，切半會變成兩張殘圖。
 
 export const albumSpread = [
+  { f: 'hotel-01.jpg', fit: 'cover' },
+  { f: 'hotel-04.jpg', fit: 'cover' },
   { f: 'hotel-02-L.jpg', fit: 'cover' },
   { f: 'hotel-02-R.jpg', fit: 'cover' },
   { f: 'hotel-03-L.jpg', fit: 'cover' },
@@ -14,8 +16,6 @@ export const albumSpread = [
   { f: 'hotel-05-R.jpg', fit: 'cover' },
   { f: 'hotel-09-L.jpg', fit: 'cover' },
   { f: 'hotel-09-R.jpg', fit: 'cover' },
-  { f: 'hotel-01.jpg', fit: 'cover' },
-  { f: 'hotel-04.jpg', fit: 'cover' },
   { f: 'hotel-06.jpg', fit: 'cover' },
   { f: 'hotel-07.jpg', fit: 'cover' },
   { f: 'hotel-08.jpg', fit: 'cover' },
@@ -87,12 +87,12 @@ export const albumSpread = [
 ];
 
 export const albumSingle = [
+  { f: 'hotel-01.jpg', fit: 'cover' },
+  { f: 'hotel-04.jpg', fit: 'cover' },
   { f: 'hotel-02.jpg', fit: 'contain' },
   { f: 'hotel-03.jpg', fit: 'contain' },
   { f: 'hotel-05.jpg', fit: 'contain' },
   { f: 'hotel-09.jpg', fit: 'contain' },
-  { f: 'hotel-01.jpg', fit: 'cover' },
-  { f: 'hotel-04.jpg', fit: 'cover' },
   { f: 'hotel-06.jpg', fit: 'cover' },
   { f: 'hotel-07.jpg', fit: 'cover' },
   { f: 'hotel-08.jpg', fit: 'cover' },
