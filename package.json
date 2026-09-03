@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "album": "node scripts/build-album.mjs"
+    "album": "node scripts/build-album.mjs",
+    "pattern": "node scripts/build-pattern.mjs"
   },
   "devDependencies": {
     "vite": "^8.2.0"

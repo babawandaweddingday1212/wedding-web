@@ -14,14 +14,14 @@ const asset = (path) => `${import.meta.env.BASE_URL}${path}`;
 // offset 單位是 rem，drift 是視窗高度的倍數（見 utils/parallax.js）。
 const PHOTO_GROUPS = {
   tunnel: [
-    { file: 'tunnel-03.jpg', offset: 0, drift: 0.075 },
-    { file: 'tunnel-08.jpg', offset: 4, drift: 0.018 },
-    { file: 'tunnel-12.jpg', offset: 1.6, drift: 0.048 },
+    { file: 'tunnel-15.jpg', offset: 0, drift: 0.075 },
+    { file: 'tunnel-02.jpg', offset: 4, drift: 0.018 },
+    { file: 'tunnel-03.jpg', offset: 1.6, drift: 0.048 },
   ],
-  huashan: [
-    { file: 'huashan-13.jpg', offset: 3.4, drift: 0.022 },
-    { file: 'huashan-02.jpg', offset: 0, drift: 0.078 },
-    { file: 'huashan-06.jpg', offset: 1.2, drift: 0.045 },
+  studio: [
+    { file: 'studio-red-03.jpg', offset: 3.4, drift: 0.022 },
+    { file: 'studio-red-01.jpg', offset: 0, drift: 0.078 },
+    { file: 'studio-white-04.jpg', offset: 1.2, drift: 0.045 },
   ],
 };
 
@@ -132,7 +132,7 @@ export function renderInfo(root, side, onGoRsvp) {
       </section>
 
 
-      ${renderPhotoGroup('huashan')}
+      ${renderPhotoGroup('studio')}
 
       <section class="info__section">
         <h2 class="section-title">婚紗照相簿</h2>

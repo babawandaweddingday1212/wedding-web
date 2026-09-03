@@ -111,7 +111,7 @@ export function createParallax(root) {
     // --- 元素本身微幅飄移 ---
     for (const { el, amount } of drifters) {
       const rect = el.getBoundingClientRect();
-      // height 為 0 表示被 display:none 收起來了（窄螢幕會收掉第三張）。
+      // height 為 0 表示被 display:none 收起來了（窄螢幕會收掉第一張）。
       // 不擋的話 rect 全是 0，會被算成「剛離場」而寫入一個假的位移。
       if (!rect.height || rect.bottom < -200 || rect.top > vh + 200) continue;
 

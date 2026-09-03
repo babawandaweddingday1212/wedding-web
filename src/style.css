@@ -559,17 +559,16 @@ a {
      濃度由 JS 依捲動距離推上去（見 data-parallax-fade）。 */
   opacity: 0;
 
-  /* 三個圖案各自獨立一層，網格週期刻意都不一樣 ——
-     疊起來之後整體要到三者的最小公倍數才會重複，
-     所以看不出是規律的方陣。
-     四周的留白是各檔案 viewBox 自己帶的：background-size 用的是
-     meet 模式，一定會有一軸貼齊，光調尺寸排不出四周都有的間距。 */
-  background-image:
-    url('/photos/background/whale.svg'),
-    url('/photos/background/cattail.svg'),
-    url('/photos/background/lily.svg');
-  background-position: 0 0, 420px 300px, 700px 640px;
-  background-size: 1150px 840px, 980px 891px, 1040px 1040px;
+  /* 只鋪一塊拼貼磚，三種圖案全排在裡面（排法見 scripts/build-pattern.mjs）。
+     一種圖案鋪一層的做法看起來會很假：層跟層之間誰壓到誰沒人管，鯨魚會
+     直接穿過蘆葦；而且只要格子比視窗窄，同一朵花就會在同一個高度上並排
+     兩次。排在同一塊磚裡才有辦法一次管好大小、間距和誰不能跟誰同高。
+     磚做到 3840×3240，比桌機視窗還寬，同一份排列的重複已在畫面外。
+     background-size 必須正好等於磚的 viewBox 尺寸 —— meet 模式下對不上
+     就會多留一圈白邊，位置會整個偏掉。 */
+  background-image: url('/photos/background/pattern.svg');
+  background-position: 0 0;
+  background-size: 3840px 3240px;
   background-repeat: repeat;
 }
 
@@ -612,7 +611,7 @@ a {
 
 @media (max-width: 640px) {
   /* 手機上三欄每欄只剩 100px 出頭，人臉小到看不出是誰。
-     改成兩欄，第三張純粹是裝飾（整組都 aria-hidden），直接收掉。 */
+     改成兩欄，並收掉每組第一張，只保留手機版指定的兩張照片。 */
   .stagger {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -628,14 +627,13 @@ a {
     filter: blur(18px);
   }
 
-  /* 花紋整組縮到約 55%，不然一隻鯨魚就超過手機寬度，
+  /* 花紋整組縮到 55%，不然最大那隻鯨魚就超過手機寬度，
      看到的只會是一段看不出是什麼的線條 */
   .page-pattern {
-    background-position: 0 0, 230px 165px, 385px 350px;
-    background-size: 630px 460px, 540px 490px, 570px 570px;
+    background-size: 2112px 1782px;
   }
 
-  .stagger__item:nth-child(3) {
+  .stagger__item:nth-child(1) {
     display: none;
   }
 }
@@ -1415,4 +1413,3 @@ a {
     transition: none;
   }
 }
-
