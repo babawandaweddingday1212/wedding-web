@@ -8,7 +8,9 @@
 // 因此左半必須落在偶數索引，否則會被裝訂線切在錯的地方。
 // 索引落在奇數時，就先插一張直幅照片把它推到偶數位。
 //
-// 用法：node scripts/build-album.mjs
+// 用法：
+//   node scripts/build-album.mjs
+//   node scripts/build-album.mjs --manifest-only  // 只重排頁序，不重新壓圖
 
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -18,12 +20,16 @@ import path from 'node:path';
 const SRC = 'photos-src/album';
 const OUT = 'public/photos/album';
 const MANIFEST = 'src/data/albumPages.js';
+const MANIFEST_ONLY = process.argv.includes('--manifest-only');
 
 /** 分組顯示順序：飯店 → 華山 → 棚拍（紅、白）→ 隧道 */
 const GROUP_ORDER = ['hotel', 'huashan', 'studio-red', 'studio-white', 'tunnel'];
 
 /** 相簿最前面的精選照片，依序排成第一個桌機跨頁 */
 const FEATURED_PAGES = ['hotel-01.jpg', 'hotel-04.jpg'];
+
+/** 不放進相簿的重複照片，原始檔仍保留給其他版面使用 */
+const EXCLUDED_PAGES = ['studio-red-04.jpg'];
 
 const PAGE_LONG_EDGE = 900; // 單頁輸出的長邊
 const QUALITY = 78;
@@ -38,15 +44,6 @@ function size(file) {
   const h = Number(out.match(/pixelHeight:\s*(\d+)/)[1]);
   return { w, h };
 }
-
-// 先把裁切工具編成執行檔：橫幅有 21 張、要跑 42 次，
-// 每次都用 swift 直譯啟動會慢上一個數量級
-const CROP_BIN = path.join(os.tmpdir(), 'wedding-crop');
-console.log('編譯裁切工具…');
-execFileSync('swiftc', ['-O', 'photos-src/crop.swift', '-o', CROP_BIN], { stdio: 'pipe' });
-
-fs.rmSync(OUT, { recursive: true, force: true });
-fs.mkdirSync(OUT, { recursive: true });
 
 const all = fs
   .readdirSync(SRC)
@@ -95,7 +92,9 @@ for (const { group, files } of grouped) {
     singleCount++;
   }
 
-  const remaining = items.filter((item) => !FEATURED_PAGES.includes(item.file));
+  const remaining = items.filter(
+    (item) => !FEATURED_PAGES.includes(item.file) && !EXCLUDED_PAGES.includes(item.file),
+  );
   const portraits = remaining.filter((i) => !i.wide);
   const wides = remaining.filter((i) => i.wide);
   let pi = 0;
@@ -135,46 +134,57 @@ for (const { group, files } of grouped) {
 }
 
 // --- 產生圖檔 ---
-for (const { files } of grouped) {
-  for (const f of files) {
-    const src = path.join(SRC, f);
-    const { w, h } = size(src);
-    const base = f.replace(/\.jpg$/i, '');
+if (!MANIFEST_ONLY) {
+  // 先把裁切工具編成執行檔：橫幅有 21 張、要跑 42 次，
+  // 每次都用 swift 直譯啟動會慢上一個數量級
+  const CROP_BIN = path.join(os.tmpdir(), 'wedding-crop');
+  console.log('編譯裁切工具…');
+  execFileSync('swiftc', ['-O', 'photos-src/crop.swift', '-o', CROP_BIN], { stdio: 'pipe' });
 
-    // 直幅只要一份；橫幅除了左右半，還要保留完整一張給手機單頁模式用
-    sips(['-Z', String(PAGE_LONG_EDGE), '-s', 'format', 'jpeg', '-s', 'formatOptions',
-      String(QUALITY), '--out', path.join(OUT, f), src]);
-    if (w <= h) continue;
+  fs.rmSync(OUT, { recursive: true, force: true });
+  fs.mkdirSync(OUT, { recursive: true });
 
-    // 橫幅：等分成左右兩半，各自成為一頁。
-    //
-    // 這裡不用 sips —— 它的 --cropOffset 是以「中心」為基準，
-    // 而且負值會被當成參數旗標，切不出乾淨的左右半（實測會重疊）。
-    // photos-src/crop.swift 用 CoreImage 直接吃像素矩形，語意明確。
-    const half = Math.floor(w / 2);
-    for (const [suffix, x] of [['L', 0], ['R', w - half]]) {
-      const tmp = path.join(OUT, `__tmp-${suffix}.jpg`);
-      execFileSync(CROP_BIN, [src, tmp, String(x), '0', String(half), String(h)], {
-        stdio: 'pipe',
-      });
+  for (const { files } of grouped) {
+    for (const f of files) {
+      const src = path.join(SRC, f);
+      const { w, h } = size(src);
+      const base = f.replace(/\.jpg$/i, '');
+
+      // 直幅只要一份；橫幅除了左右半，還要保留完整一張給手機單頁模式用
       sips(['-Z', String(PAGE_LONG_EDGE), '-s', 'format', 'jpeg', '-s', 'formatOptions',
-        String(QUALITY), '--out', path.join(OUT, `${base}-${suffix}.jpg`), tmp]);
-      fs.rmSync(tmp);
+        String(QUALITY), '--out', path.join(OUT, f), src]);
+      if (w <= h) continue;
+
+      // 橫幅：等分成左右兩半，各自成為一頁。
+      //
+      // 這裡不用 sips —— 它的 --cropOffset 是以「中心」為基準，
+      // 而且負值會被當成參數旗標，切不出乾淨的左右半（實測會重疊）。
+      // photos-src/crop.swift 用 CoreImage 直接吃像素矩形，語意明確。
+      const half = Math.floor(w / 2);
+      for (const [suffix, x] of [['L', 0], ['R', w - half]]) {
+        const tmp = path.join(OUT, `__tmp-${suffix}.jpg`);
+        execFileSync(CROP_BIN, [src, tmp, String(x), '0', String(half), String(h)], {
+          stdio: 'pipe',
+        });
+        sips(['-Z', String(PAGE_LONG_EDGE), '-s', 'format', 'jpeg', '-s', 'formatOptions',
+          String(QUALITY), '--out', path.join(OUT, `${base}-${suffix}.jpg`), tmp]);
+        fs.rmSync(tmp);
+      }
     }
   }
-}
 
-// 需要的話產生一張純白的墊頁
-if (spreadPages.some((p) => p.f === '__blank.jpg')) {
-  const w = 640;
-  const h = 900;
-  const ppm = path.join(OUT, '__blank.ppm');
-  fs.writeFileSync(ppm, Buffer.concat([
-    Buffer.from(`P6\n${w} ${h}\n255\n`),
-    Buffer.alloc(w * h * 3, 0xff),
-  ]));
-  sips(['-s', 'format', 'jpeg', '--out', path.join(OUT, '__blank.jpg'), ppm]);
-  fs.rmSync(ppm);
+  // 需要的話產生一張純白的墊頁
+  if (spreadPages.some((p) => p.f === '__blank.jpg')) {
+    const w = 640;
+    const h = 900;
+    const ppm = path.join(OUT, '__blank.ppm');
+    fs.writeFileSync(ppm, Buffer.concat([
+      Buffer.from(`P6\n${w} ${h}\n255\n`),
+      Buffer.alloc(w * h * 3, 0xff),
+    ]));
+    sips(['-s', 'format', 'jpeg', '--out', path.join(OUT, '__blank.jpg'), ppm]);
+    fs.rmSync(ppm);
+  }
 }
 
 // --- 寫出頁序清單 ---
