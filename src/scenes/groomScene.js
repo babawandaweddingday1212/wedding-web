@@ -1,5 +1,8 @@
 import * as THREE from 'three';
-import gsap from 'gsap';
+// GSAP 只取 core：這兩段動畫補間的都是純 JS 物件（uniform、material、
+// Object3D 的位置與縮放），完全沒有碰 DOM 樣式，所以用不到預設進入點會
+// 一併帶進來的 CSSPlugin。power / back 這些 ease 本來就在 core 裡。
+import gsap from 'gsap/gsap-core';
 import { createMatrixRain } from '../utils/matrixRain.js';
 import { samplePhotoParticles } from '../utils/photoParticles.js';
 import { createGlyphAtlas } from '../utils/glyphAtlas.js';

@@ -2,6 +2,7 @@ import { weddingData } from '../data/weddingData.js';
 import { createParallax } from '../utils/parallax.js';
 import { backdropMarkup } from '../utils/pageBackdrop.js';
 import { countdownMarkup, startCountdown } from '../utils/countdown.js';
+import { rsvpFormMarkup, initRsvpForm } from '../utils/rsvpForm.js';
 
 const asset = (path) => `${import.meta.env.BASE_URL}${path}`;
 
@@ -12,6 +13,10 @@ const asset = (path) => `${import.meta.env.BASE_URL}${path}`;
 // 滑動含蓄得多，也不會把人臉裁掉。
 //
 // offset 單位是 rem，drift 是視窗高度的倍數（見 utils/parallax.js）。
+// 相簿的直幅頁一律是 600×900（見 scripts/build-album.mjs），所以 <img>
+// 直接把這個尺寸寫死。有了寬高瀏覽器才能在圖還沒載完時先留好位置 ——
+// 少了它，lazy 圖一張張載進來會把下面的內容一路往下推，從 LINE 用
+// #/album 這種定錨連結進來的人會先看到捲錯位置。
 const PHOTO_GROUPS = {
   tunnel: [
     { file: 'tunnel-15.jpg', offset: 0, drift: 0.075 },
@@ -30,7 +35,15 @@ function renderPhotoGroup(name) {
     .map(
       ({ file, offset, drift }) => `
         <figure class="stagger__item" style="--offset:${offset}rem" data-parallax-drift="${drift}">
-          <img class="stagger__photo" src="${asset(`photos/album/${file}`)}" alt="" loading="lazy" decoding="async" />
+          <img
+            class="stagger__photo"
+            src="${asset(`photos/album/${file}`)}"
+            alt=""
+            width="600"
+            height="900"
+            loading="lazy"
+            decoding="async"
+          />
         </figure>`
     )
     .join('');
@@ -38,13 +51,16 @@ function renderPhotoGroup(name) {
 }
 
 /**
- * 渲染婚禮資訊頁
+ * 渲染婚禮資訊頁 —— 全站唯一的內容頁，出席回覆表單也在這一頁的最後一段。
+ *
+ * 每個 <section> 都有 id，是給 LINE 官方帳號那類外部連結定錨用的
+ * （例如 #/album 會直接捲到婚紗照相簿，見 main.js 的路由）。
+ *
  * @param {HTMLElement} root
  * @param {'groom'|'bride'|null} side
- * @param {() => void} onGoRsvp - 前往出席回覆表單頁
  * @returns {() => void} cleanup
  */
-export function renderInfo(root, side, onGoRsvp) {
+export function renderInfo(root, side) {
   const target = new Date(weddingData.dateISO);
 
   root.innerHTML = `
@@ -59,7 +75,7 @@ export function renderInfo(root, side, onGoRsvp) {
         <p class="hero-welcome">${weddingData.welcomeMessage}</p>
       </header>
 
-      <section class="info__section">
+      <section class="info__section" id="venue">
         <h2 class="section-title">婚禮地點</h2>
         <div class="venue-card">
           <iframe
@@ -79,7 +95,7 @@ export function renderInfo(root, side, onGoRsvp) {
 
       ${renderPhotoGroup('tunnel')}
 
-      <section class="info__section">
+      <section class="info__section" id="transport">
         <h2 class="section-title">交通資訊</h2>
         <p class="transport__intro">${weddingData.transport.intro}</p>
 
@@ -110,12 +126,12 @@ export function renderInfo(root, side, onGoRsvp) {
 
         ${
           weddingData.transport.mapImage
-            ? `<img class="transport__map" src="${weddingData.transport.mapImage}" alt="交通位置示意圖" loading="lazy" />`
+            ? `<img class="transport__map" src="${weddingData.transport.mapImage}" alt="交通位置示意圖" width="1043" height="999" loading="lazy" decoding="async" />`
             : ''
         }
       </section>
 
-      <section class="info__section">
+      <section class="info__section" id="schedule">
         <h2 class="section-title">婚禮流程</h2>
         <ul class="schedule-list">
           ${weddingData.schedule
@@ -134,7 +150,7 @@ export function renderInfo(root, side, onGoRsvp) {
 
       ${renderPhotoGroup('studio')}
 
-      <section class="info__section">
+      <section class="info__section" id="album">
         <h2 class="section-title">婚紗照相簿</h2>
         <div class="album">
           <div class="album__book" id="album-book"></div>
@@ -146,13 +162,13 @@ export function renderInfo(root, side, onGoRsvp) {
         </div>
       </section>
 
-      <section class="info__section">
+      <section class="info__section" id="rsvp">
         <h2 class="section-title">立即回覆出席</h2>
         <p class="info__cta-text">
           為了提供您美好的饗宴，請於 <b>${weddingData.rsvpDeadline}</b> 前撥空完成表單。<br />
           若需要紙本喜帖，歡迎您在表單裡留下寄送地址，期待我們精美的喜帖。
         </p>
-        <button class="form-submit" id="go-rsvp" type="button">前往填寫回覆表單 →</button>
+        ${rsvpFormMarkup(side)}
       </section>
 
       <footer class="info__footer">
@@ -183,26 +199,50 @@ export function renderInfo(root, side, onGoRsvp) {
   prevBtn.addEventListener('click', handlePrev);
   nextBtn.addEventListener('click', handleNext);
 
-  import('../utils/albumFlipbook.js').then(({ createAlbumFlipbook }) => {
-    if (cancelled) return;
-    flipbook = createAlbumFlipbook(bookEl, (current, total) => {
-      counterEl.textContent = `${current} / ${total}`;
-    });
-  });
+  // 相簿要等賓客快捲到了才建立。page-flip 本身 50KB，而且一建立就會把
+  // 目前頁面前後各四頁的照片抓下來（約 700KB）—— 那是整頁最大的一筆流量，
+  // 卻是在頁面後半段才看得到的東西。用 IntersectionObserver 等到相簿進入
+  // 視窗前 400px 再載，只是來看時間地點的賓客就完全不必付這筆。
+  //
+  // 從 #/album 進來的人不會因此變慢：那種情況相簿一開始就在視窗裡，
+  // observer 會立刻觸發。
+  let albumObserver = null;
 
-  // --- 前往 RSVP 表單頁 ---
-  // 表單本身已獨立成 src/pages/rsvp.js，這裡只負責導頁
-  const goRsvpBtn = root.querySelector('#go-rsvp');
-  const handleGoRsvp = () => onGoRsvp();
-  goRsvpBtn.addEventListener('click', handleGoRsvp);
+  function mountAlbum() {
+    albumObserver?.disconnect();
+    albumObserver = null;
+    import('../utils/albumFlipbook.js').then(({ createAlbumFlipbook }) => {
+      if (cancelled) return;
+      flipbook = createAlbumFlipbook(bookEl, (current, total) => {
+        counterEl.textContent = `${current} / ${total}`;
+      });
+    });
+  }
+
+  if (typeof IntersectionObserver === 'function') {
+    albumObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) mountAlbum();
+      },
+      { rootMargin: '400px 0px' }
+    );
+    albumObserver.observe(root.querySelector('#album'));
+  } else {
+    mountAlbum();
+  }
+
+  // --- 出席回覆表單 ---
+  // 表單的 markup 與行為都在 utils/rsvpForm.js，這裡只負責掛上去
+  const disposeRsvpForm = initRsvpForm(root);
 
   return () => {
     cancelled = true;
+    albumObserver?.disconnect();
     stopCountdown();
     prevBtn.removeEventListener('click', handlePrev);
     nextBtn.removeEventListener('click', handleNext);
     flipbook?.destroy();
     parallax.destroy();
-    goRsvpBtn.removeEventListener('click', handleGoRsvp);
+    disposeRsvpForm();
   };
 }

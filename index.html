@@ -7,8 +7,13 @@
     <meta name="description" content="俊笙與婕瑜的婚禮邀請網站" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- 只留樣式表真的用到的字重（400 / 600 / 700）。
+         中日韓字型每一個字重都是好幾百 KB 起跳的一整組 unicode-range 分片，
+         多掛一個沒人用的字重，手機就白白多下載一份。
+         Cormorant Garamond 也拿掉了：它只排在 --font-serif 的第二順位，
+         而 Noto Serif TC 本身就含拉丁字母，永遠輪不到它上場。 -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Share+Tech+Mono&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@400;700&family=Share+Tech+Mono&display=swap"
       rel="stylesheet"
     />
   </head>

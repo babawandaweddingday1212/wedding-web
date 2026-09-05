@@ -1,4 +1,52 @@
-# 俊笙 ♥ 婕瑜 婚禮邀請網站
+# 🙇 你不應該來這邊
+
+> 這裡是一對即將結婚的新人的喜帖網站。
+> 不是產品、不是作品集、更不是靶場。
+
+**小弟在此跪求：拜託不要爆破。**
+
+這個站的「後端」是一張 Google 試算表。它沒有 WAF、沒有 rate limit、
+沒有備援，人生也沒有受過任何防禦訓練。你隨手灌一千筆假資料，
+我就得在婚禮前一個一個手動刪掉，然後在婚宴上被丈母娘問「怎麼有一千個人要來」。
+
+<img alt="跪" src="https://img.shields.io/badge/%E5%B0%8F%E5%BC%9F-%E8%B7%AA%E6%B1%82%E4%B8%8D%E8%A6%81%E7%88%86%E7%A0%B4-b8825a?style=for-the-badge" />
+
+## 你可能是這幾種人
+
+**🕵️ 路過的陌生人**
+恭喜你，你走錯地方了。這裡沒有 flag、沒有賞金、沒有 0day，
+只有兩個人要結婚，和一堆為了讓喜帖好看一點而寫的過度工程。
+請左轉離開，謝謝你。
+
+**🧑‍💻 來看程式碼的工程師朋友**
+歡迎，隨便看。註解寫得很多，因為我怕三個月後的自己看不懂。
+只有一個請求：**不要對表單送測試資料**。
+你想試的話跟我說一聲，我開一份 sandbox 給你玩，真的。
+
+**👰 賓客**
+你也走錯地方了 😂 這裡是原始碼，喜帖在這邊 👉
+<https://babawandaweddingday1212.github.io/wedding-web/>
+表單填一次就好，填兩次我會以為你要帶兩桌。
+
+**🤵 我自己（未來的我）**
+下面有你當初寫的文件。你會需要的。
+
+## 行為守則（正經版）
+
+- 表單請只送一次真實回覆，不要壓測、不要爆量、不要自動化
+- 找到問題請直接告訴我，不要「順手驗證一下」
+- 照片是我們的婚紗照，請不要轉貼或拿去做別的用途
+- 這個 repo 沒有授權任何再利用；想拿去當自己的喜帖模板，
+  跟我說一聲就好，我大概率會答應，而且會很開心
+
+祝你有美好的一天。如果你人就在台北，2026/12/12 我們請你喝一杯 🥂
+
+---
+
+<details>
+<summary><b>好啦，如果你真的是來看技術文件的 —— 點我展開</b></summary>
+
+<br />
 
 用 [Vite](https://vitejs.dev) + [Three.js](https://threejs.org) + [GSAP](https://gsap.com) 打造的婚禮邀請單頁網站。
 
@@ -39,20 +87,22 @@ wedding-site/
 │  ├─ pages/
 │  │  ├─ landing.js           # 首頁（選擇男方／女方賓客）
 │  │  ├─ scene.js             # 3D 動畫過場頁的外框（字幕、略過、進度條）
-│  │  └─ info.js              # 婚禮資訊頁（倒數、地圖、流程、表單、相簿）
+│  │  └─ info.js              # 婚禮資訊頁（倒數、地圖、流程、相簿、出席回覆表單）
 │  ├─ scenes/
 │  │  ├─ groomScene.js        # 男方 3D 動畫（駭客風格）
 │  │  └─ brideScene.js        # 女方 3D 動畫（RICOH Pro C9500 印刷機）
 │  └─ utils/
+│     ├─ rsvpForm.js          # 出席回覆表單的 markup 與行為（嵌在資訊頁裡）
 │     ├─ matrixRain.js        # 數位雨背景效果
 │     ├─ photoParticles.js    # ★ 照片取樣成粒子（座標／亮度／原色）＋色階拉伸
 │     ├─ glyphAtlas.js        # 字元圖集貼圖（粒子的文字階段用）
 │     ├─ printedPortrait.js   # 把合照排版成印刷卡片貼圖（給女方動畫用）
-│     ├─ pressConsole.js      # 印刷機控制台螢幕 UI 貼圖
-│     ├─ silhouette.js        # （已無引用，可刪）舊版側臉剪影繪製
-│     └─ dotTexture.js        # （已無引用，可刪）舊版粒子柔光圓點材質
+│     └─ pressConsole.js      # 印刷機控制台螢幕 UI 貼圖
 ├─ public/
 │  └─ photos/                 # 網頁實際使用的照片（請先壓到 1600px 以內）
+│     ├─ album/               # 相簿頁面，由 `npm run album` 產生
+│     ├─ background/          # 背景花紋 SVG，由 `npm run pattern` 產生
+│     └─ wash/                # 襯底色調層用的 240px 縮圖（會被糊掉，不需要解析度）
 └─ photos-src/                # 原始高解析照片，不會被打包進網站
 ```
 
@@ -99,7 +149,7 @@ export const weddingData = {
 
 ### 3. 動畫中的「新人合照」
 
-兩支動畫目前都用程式產生的**剪影 / 網點插畫**代替真人照片（在 `src/utils/silhouette.js` 與 `src/utils/printedPortrait.js`），效果已經設計成跟駭客風 / 印刷風主題搭配。
+兩支動畫目前都用程式產生的**網點插畫**排版合照（在 `src/utils/printedPortrait.js`），效果已經設計成跟駭客風 / 印刷風主題搭配。
 
 如果之後想換成真實照片：
 - **男方動畫**：可以把 `groomScene.js` 中組成剪影的粒子，改成用真實照片的邊緣偵測結果取樣（技術上需要額外處理，非必要）。
@@ -109,19 +159,49 @@ export const weddingData = {
 
 ### 4. RSVP 表單
 
-目前是**前端模擬送出**（`src/pages/info.js`）：使用者送出後會看到成功訊息，資料會印在瀏覽器 console，但不會真的儲存到任何地方。
+表單就在婚禮資訊頁的最後一段（markup 與行為在 `src/utils/rsvpForm.js`），不再是獨立的一頁。
+
+送出目的地由 `weddingData.rsvpEndpoint` 決定；沒有填的話是**前端模擬送出**：使用者送出後會看到成功訊息，資料會印在瀏覽器 console，但不會真的儲存到任何地方。
 
 之後要串接真實後端，有兩個常見做法：
 
 - **最簡單：Google 表單 / Google Sheet**（透過 Apps Script 建立一個接收 POST 的網址），把網址填入 `weddingData.js` 的 `rsvpEndpoint`，程式碼已經預留好會自動 `fetch(rsvpEndpoint, { method: 'POST', body: JSON.stringify(data) })`。
 - **自訂後端**：接上任何你熟悉的後端 API（Firebase、Supabase、Notion API、自己寫的伺服器…），一樣填入 `rsvpEndpoint` 即可，或是直接修改 `handleSubmit` 函式。
 
+送出時按鈕會停用並轉圈（顯示「送出中…」），因為寫進 Google 試算表通常要一到兩秒。
+Apps Script 冷啟動時，第一個 POST 實測會卡十秒以上然後回 404 —— 那是 Google 端的暖機，
+所以 `submitToEndpoint()` 遇到 HTTP 錯誤或連線失敗會自動重送（最多三次、間隔 0.8 與 2.5 秒），
+三次都失敗才顯示「送出失敗」，而且表單內容會原封不動留著，賓客不必重打。
+
+### 5. 從 LINE 官方帳號連到指定段落
+
+整站只有一頁婚禮資訊，所有內容（含出席回覆表單）都在同一頁，網址加上區塊名稱就會直接捲到該段：
+
+| 想連到 | 網址 |
+| --- | --- |
+| 婚紗照相簿 | `https://babawandaweddingday1212.github.io/wedding-web/#/album` |
+| 出席回覆表單 | `https://babawandaweddingday1212.github.io/wedding-web/#/rsvp` |
+| 婚禮地點 | `.../#/venue` |
+| 交通資訊 | `.../#/transport` |
+| 婚禮流程 | `.../#/schedule` |
+
+想同時預選賓客身份（表單裡的「賓客身份」欄位）就寫成 `#/info/groom/album`、`#/info/bride/rsvp`。
+區塊名稱就是 `src/pages/info.js` 裡各段 `<section>` 的 `id`，要新增定錨點時兩邊一起加：
+`info.js` 的 `id` 與 `src/main.js` 的 `SECTION_IDS`。
+
 ---
 
 ## 技術重點 / 給工程師的補充說明
 
 - **路由**：沒有用任何前端框架，`src/main.js` 是一個極簡的手寫狀態機，透過替換 `#app` 的內容切換「首頁 / 動畫 / 資訊頁」，並確實呼叫每頁回傳的 `cleanup()` 函式，避免 Three.js 場景、計時器、事件監聽器在切頁後繼續佔用資源。
-- **效能**：`three` 相關程式碼透過動態 `import()` 拆分成獨立 chunk，只有在使用者真的點擊「男方／女方賓客」按鈕時才會載入，首頁本身非常輕量。
+- **定錨**：`#/album` 這類網址會開資訊頁並捲到對應區塊。由於頁面上方有 lazy 載入的照片與地圖 iframe，載完會把版面撐高、位置就跑掉了，所以 `scrollToSection()` 會盯著文件高度反覆對位，直到高度安定（或使用者自己動了捲軸）才停手。
+- **效能**：資訊頁首屏實測約 355KB（含字型 CSS）。做法都是同一個原則 —— 沒看到的東西不要下載：
+  - `three` / `gsap` 只在點下「男方／女方賓客」時才動態載入；GSAP 取 `gsap/gsap-core`（兩支動畫都只補間純 JS 物件，用不到 CSSPlugin）
+  - 相簿（page-flip 50KB + 前後各四頁照片約 700KB）等 `IntersectionObserver` 看到相簿快進入視窗才建立
+  - SweetAlert2（20KB gzip）改成送出時才載，並在賓客第一次點進表單欄位時先在背景抓好
+  - 襯底的三張色調照片吃 `blur(26px)` 再壓到 13% 濃度，改用 240px 縮圖（551KB → 29KB）；頁首磚牆疊在近乎不透明的米色遮罩下，壓到 1280px / q55（513KB → 132KB）
+  - Google Fonts 只留樣式表真的用到的字重（中日韓字型每個字重都是一整組 unicode-range 分片）
+  - 相簿的直幅照片一律 600×900，`<img>` 直接寫死寬高，圖片載入時版面不會位移
 - **粒子動畫注意事項**：`groomScene.js` 中的粒子系統位置每一幀都會更新，因此明確設定 `points.frustumCulled = false`，避免 three.js 用初次計算出的 boundingSphere 做視錐剔除，導致動畫進行到一半粒子被誤判為畫面外而消失。
 - **響應式**：全站排版以 CSS Grid / Flexbox + `clamp()` 字級撰寫，手機、平板、桌機都已測試過基本呈現。
 - **無障礙 / 略過動畫**：兩支 3D 動畫都提供「略過動畫」按鈕與自動播放完畢後的「進入婚禮資訊」按鈕，避免動畫成為使用者取得資訊的阻礙。
@@ -131,5 +211,7 @@ export const weddingData = {
 ## 已知限制
 
 - 地圖與 Google Fonts 需要網路連線才能正確顯示（正式部署到網路上後即可正常運作）。
-- RSVP 表單尚未串接任何真實後端，送出後資料不會被保存（見上方說明）。
+- RSVP 表單送到 Google Apps Script，冷啟動時第一筆會慢十秒以上（已自動重試，見上方說明）。
 - 3D 動畫在非常舊的裝置 / 瀏覽器（不支援 WebGL）上會無法顯示，建議之後視情況加上簡單的 WebGL 支援度偵測與純圖文備援畫面。
+
+</details>

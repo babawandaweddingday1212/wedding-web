@@ -476,8 +476,7 @@ a {
     linear-gradient(180deg, rgba(250, 246, 239, 0.82) 0%, rgba(250, 246, 239, 0.9) 60%, rgba(250, 246, 239, 0.97) 100%);
 }
 
-.info__hero > *:not(.hero-photo),
-.rsvp-page__hero > *:not(.hero-photo) {
+.info__hero > *:not(.hero-photo) {
   position: relative;
 }
 
@@ -677,6 +676,12 @@ a {
   border-top: 1px solid rgba(184, 146, 90, 0.18);
 }
 
+/* 從外部連結（例如 LINE 的 #/album）捲進來時，讓標題離視窗上緣有點距離，
+   不然分隔線與標題會緊貼著螢幕邊緣，看起來像被切掉半截。 */
+.info__section[id] {
+  scroll-margin-top: 1.2rem;
+}
+
 .section-title {
   font-family: var(--font-serif);
   font-size: clamp(1.4rem, 3vw, 1.9rem);
@@ -840,9 +845,13 @@ a {
 }
 
 /* --- RSVP Form --- */
+/* 表單嵌在資訊頁最後一段裡。段落本身有 880px，但輸入框排到那麼寬
+   反而難填，所以自己再收窄一點並置中。 */
 .rsvp-form {
   display: grid;
   gap: 1.1rem;
+  max-width: 640px;
+  margin: 0 auto;
   background: #fff;
   padding: 1.8rem;
   border-radius: 18px;
@@ -960,11 +969,57 @@ a {
   font-weight: 700;
   letter-spacing: 0.08em;
   transition: background 0.25s ease, transform 0.25s ease;
+  /* 送出中會在文字左邊多一顆轉圈的圓環，兩者要一起置中 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
 }
 
 .form-submit:hover {
   background: #a3665f;
   transform: translateY(-2px);
+}
+
+/* 送出中 —— 送到 Google 試算表要一到數秒（冷啟動更久），
+   這段時間按鈕停用並轉圈，賓客才知道是在等，而不是按了沒反應。 */
+.form-submit[disabled] {
+  cursor: progress;
+  opacity: 0.8;
+}
+
+.form-submit[disabled]:hover {
+  background: var(--color-blush-deep);
+  transform: none;
+}
+
+.form-submit__spinner {
+  display: none;
+  width: 1em;
+  height: 1em;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  /* 避免縮放時被擠扁 */
+  flex: none;
+  animation: form-submit-spin 0.7s linear infinite;
+}
+
+.form-submit.is-loading .form-submit__spinner {
+  display: block;
+}
+
+@keyframes form-submit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 會暈眩的使用者把動畫放慢，但保留「還在轉 = 還在等」這個訊息 */
+@media (prefers-reduced-motion: reduce) {
+  .form-submit__spinner {
+    animation-duration: 2.4s;
+  }
 }
 
 /* ============================================================
@@ -1202,76 +1257,6 @@ a {
   line-height: 2;
   letter-spacing: 0.03em;
   text-align: center;
-}
-
-/* ============================================================
-   RSVP 獨立頁
-   ============================================================ */
-.rsvp-page {
-  /* 刻意不上底色 —— 不透明底色會整片蓋住 .page-wash（見資訊頁的說明）。
-     z-index 則是把內容抬到襯底之上。 */
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.rsvp-page__hero {
-  position: relative;
-  /* 頁首照片比容器高，超出的部分要裁掉 */
-  overflow: hidden;
-  /* 內容要疊在背景層之上 */
-  isolation: isolate;
-  /* 給足高度，照片才看得出是照片。太矮的話 cover 之後
-     只會露出磚牆最上緣那一條，看不到人。 */
-  min-height: 38vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 3.2rem 6vw 2.6rem;
-  text-align: center;
-  background: var(--color-cream-deep);
-}
-
-.rsvp-page__back {
-  /* 頁首改成 flex 直排之後，inline-block 會被拉滿整行，
-     藥丸形狀就沒了 —— 要自己置中。 */
-  align-self: center;
-  margin-bottom: 1.4rem;
-  padding: 0.5rem 1rem;
-  border: 1px solid rgba(184, 146, 90, 0.4);
-  border-radius: 999px;
-  background: transparent;
-  color: #6b6055;
-  font-family: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: background 0.25s ease;
-}
-
-.rsvp-page__back:hover {
-  background: rgba(184, 146, 90, 0.12);
-}
-
-.rsvp-page__title {
-  font-family: var(--font-serif);
-  font-weight: 600;
-  font-size: clamp(1.8rem, 4.5vw, 2.6rem);
-  margin: 0 0 0.5rem;
-}
-
-.rsvp-page__sub {
-  color: #6b6055;
-  font-size: 0.92rem;
-  margin: 0;
-}
-
-.rsvp-page__body {
-  flex: 1;
-  width: 100%;
-  max-width: 680px;
-  margin: 0 auto;
-  padding: 2.6rem 6vw 3.5rem;
 }
 
 /* 分隔線：把「出席資訊」與「紙本喜帖」兩組問題分開 */
