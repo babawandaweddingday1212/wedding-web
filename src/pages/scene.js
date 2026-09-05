@@ -15,7 +15,6 @@ export function renderScene(root, side, onFinish) {
     <section class="page scene-page ${isGroom ? 'scene-page--groom' : 'scene-page--bride'}" id="scene-root">
       <div class="scene-overlay">
         <div class="scene-overlay__top">
-          <span class="scene-caption" id="scene-caption"></span>
           <button class="scene-skip" id="scene-skip" type="button">略過動畫 »</button>
         </div>
         <div class="scene-overlay__bottom">
@@ -35,20 +34,9 @@ export function renderScene(root, side, onFinish) {
   `;
 
   const sceneRoot = root.querySelector('#scene-root');
-  const captionEl = root.querySelector('#scene-caption');
   const skipBtn = root.querySelector('#scene-skip');
   const continueBtn = root.querySelector('#scene-continue');
   const progressBar = root.querySelector('#scene-progress-bar');
-
-  let captionTimeout = null;
-  const handleCaption = (text) => {
-    captionEl.classList.remove('is-visible');
-    clearTimeout(captionTimeout);
-    captionTimeout = setTimeout(() => {
-      captionEl.textContent = text;
-      captionEl.classList.add('is-visible');
-    }, 180);
-  };
 
   const handleProgress = (pct) => {
     progressBar.style.width = `${pct}%`;
@@ -58,8 +46,9 @@ export function renderScene(root, side, onFinish) {
   const handleReady = () => {
     if (finished) return;
     continueBtn.classList.add('is-visible');
-    // 動畫播完後，短暫停留讓使用者欣賞畫面，接著自動導向資訊頁
-    autoAdvanceTimeout = setTimeout(() => finish(), 2400);
+    // 動畫播完後短暫停留，讓最後一格畫面留在眼睛裡，接著自動導向資訊頁。
+    // 動畫本身 4.6 秒，這裡再等太久就等於把它拖回原本的長度。
+    autoAdvanceTimeout = setTimeout(() => finish(), 700);
   };
 
   let autoAdvanceTimeout = null;
@@ -95,7 +84,6 @@ export function renderScene(root, side, onFinish) {
     if (cancelled) return;
     loaderEl.remove();
     controller = createScene(sceneRoot, {
-      onCaption: handleCaption,
       onProgress: handleProgress,
       onReady: handleReady,
       photo,
@@ -105,7 +93,6 @@ export function renderScene(root, side, onFinish) {
   return () => {
     cancelled = true;
     finished = true;
-    clearTimeout(captionTimeout);
     clearTimeout(autoAdvanceTimeout);
     skipBtn.removeEventListener('click', handleSkip);
     continueBtn.removeEventListener('click', handleContinue);

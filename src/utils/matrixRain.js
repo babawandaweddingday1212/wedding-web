@@ -32,7 +32,11 @@ export function createMatrixRain(canvas, { fontSize = 18, color = '#39ff88' } = 
     canvas.height = Math.floor(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     columns = Math.ceil(width / fontSize);
-    drops = new Array(columns).fill(0).map(() => Math.random() * -50);
+    // 每一欄的起點散在「整個畫面高度」的範圍內，而不是全部從畫面上方
+    // 很遠的地方開始掉。原本是 -50 列，以每幀約 0.75 列的速度要兩秒多
+    // 才填滿畫面 —— 動畫全長只有 4.6 秒，開場那兩秒會是一片黑。
+    const rows = height / fontSize;
+    drops = new Array(columns).fill(0).map(() => Math.random() * (rows + 16) - 12);
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, width, height);
   }

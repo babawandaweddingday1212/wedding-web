@@ -8,19 +8,24 @@ import { samplePhotoParticles } from '../utils/photoParticles.js';
 import { createGlyphAtlas } from '../utils/glyphAtlas.js';
 
 /**
- * 男方賓客動畫 —— 駭客／工程師風格
+ * 男方賓客動畫 —— 工程師：程式碼變成照片
  *
- * 三段式變化，全部在 GPU 上完成：
- *   1. 稀疏的綠色字元從上方落下（uReveal 很小 → 畫面上只有「一點點文字」）
- *   2. 字元愈來愈密並聚合到照片座標，接著縮成圓點（uReveal↑、uGlyphMix 0→1）
- *   3. 顏色由駭客綠漸變回照片原色（uColorMix 0→1）
+ * 全長 4.6 秒，沒有任何文字說明 —— 該看懂的是畫面本身：
+ *   0.0s 綠色字元從上方落下，鏡頭在遠處、偏一側
+ *   0.6s 字元聚合成照片的形狀，密度一路長滿
+ *   1.8s 字縮成圓點，五官解析出來
+ *   2.4s 駭客綠褪去，還原照片原色；鏡頭同時推進、擺正
+ *   3.6s 兩人之間浮出心形
+ *
+ * 鏡頭是這段的骨架：一路從側後方推進到正面，速度先快後慢（power2.out），
+ * 加上極小幅的手持浮動。原本是固定機位只靠滑鼠視差，畫面會像一張會亮的
+ * 桌布而不是一顆鏡頭。
  *
  * @param {HTMLElement} container
- * @param {{ onCaption:(text:string)=>void, onProgress:(pct:number)=>void, onReady:()=>void, photo?:HTMLImageElement }} callbacks
+ * @param {{ onProgress:(pct:number)=>void, onReady:()=>void, photo?:HTMLImageElement }} callbacks
  */
-export function createGroomScene(container, { onCaption, onProgress, onReady, photo } = {}) {
+export function createGroomScene(container, { onProgress, onReady, photo } = {}) {
   const noop = () => {};
-  onCaption = onCaption || noop;
   onProgress = onProgress || noop;
   onReady = onReady || noop;
 
@@ -137,7 +142,9 @@ export function createGroomScene(container, { onCaption, onProgress, onReady, ph
       float worldSize = mix(glyphSize, uDotSize, uGlyphMix);
       gl_PointSize = worldSize * uScale / max(0.001, -mv.z);
 
-      vPhotoColor = aPhotoColor;
+      // 點與點之間會露出背景，點雲整體一定比原圖暗一階；
+      // 這裡補回來，收尾那張照片才不會比原照片沉。
+      vPhotoColor = min(aPhotoColor * 1.38, vec3(1.0));
 
       // 駭客綠由亮度驅動；高光往白綠偏，但幅度壓在 0.35 避免整張泛白
       float hl = aLum * aLum * 0.35;
@@ -251,13 +258,20 @@ export function createGroomScene(container, { onCaption, onProgress, onReady, ph
 
   // ---------- 相機取景 ----------
   // 照片要「大一點」，但在手機直式畫面上不能被裁掉，
-  // 因此每次 resize 都依高度與寬度兩個方向重算相機距離，取較遠者。
+  // 因此每次 resize 都依高度與寬度兩個方向重算「剛好裝得下」的距離。
+  // 實際機位由下面的 camState 以這個距離為基準推算，resize 時鏡頭運動
+  // 不會被打斷。
+  let fitDistance = 8;
   function fitCamera() {
     const halfFov = THREE.MathUtils.degToRad(camera.fov) / 2;
-    const distForHeight = PHOTO_HEIGHT * 0.5 / Math.tan(halfFov);
-    const distForWidth = photoWidth * 0.5 / (Math.tan(halfFov) * camera.aspect);
-    camera.position.z = Math.max(distForHeight, distForWidth) * 1.1;
+    const distForHeight = (PHOTO_HEIGHT * 0.5) / Math.tan(halfFov);
+    const distForWidth = (photoWidth * 0.5) / (Math.tan(halfFov) * camera.aspect);
+    fitDistance = Math.max(distForHeight, distForWidth) * 1.1;
   }
+
+  // 鏡頭狀態：dolly 是距離倍率，swing 是水平擺角（弧度），
+  // lift 是高度，roll 是鏡頭自身的傾斜。四個值都由時間軸補間。
+  const camState = { dolly: 1.42, swing: 0.34, lift: 0.85, roll: 0.055 };
 
   function resize() {
     const w = container.clientWidth;
@@ -302,11 +316,31 @@ export function createGroomScene(container, { onCaption, onProgress, onReady, ph
   heartLine.scale.set(0, 0, 0);
   scene.add(heartLine);
 
-  const glowGeometry = new THREE.SphereGeometry(0.34, 24, 24);
+  // 心形背後的光暈。原本是一顆不透明的小球，疊在照片上就是一塊
+  // 綠色的實心多邊形 —— 看起來像貼了張色紙。改成一張加法混合的
+  // 徑向漸層貼片：亮度會加進背後的粒子而不是把它們蓋掉，才是「發光」。
+  function createGlowTexture() {
+    const size = 128;
+    const c = document.createElement('canvas');
+    c.width = size;
+    c.height = size;
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    g.addColorStop(0, 'rgba(150,255,200,0.9)');
+    g.addColorStop(0.35, 'rgba(57,255,136,0.35)');
+    g.addColorStop(1, 'rgba(57,255,136,0)');
+    x.fillStyle = g;
+    x.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(c);
+  }
+  const glowTexture = createGlowTexture();
+  const glowGeometry = new THREE.PlaneGeometry(1.6, 1.6);
   const glowMaterial = new THREE.MeshBasicMaterial({
-    color: 0x39ff88,
+    map: glowTexture,
     transparent: true,
     opacity: 0,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
   });
   const glowSphere = new THREE.Mesh(glowGeometry, glowMaterial);
   glowSphere.position.set(heartX, heartY, -0.4);
@@ -328,37 +362,54 @@ export function createGroomScene(container, { onCaption, onProgress, onReady, ph
     onUpdate: () => onProgress(Math.round(tl.progress() * 100)),
   });
 
-  onCaption('正在解析賓客資料 // decrypting_guest_data...');
-
-  tl.to(uniforms.uAssemble, { value: 1, duration: 4.2, ease: 'power2.out' }, 0)
-    .to(uniforms.uReveal, { value: 1, duration: 3.6, ease: 'power1.inOut' }, 0)
-    .call(() => onCaption('影像資料串流中 // streaming_pixels...'), [], 1.8)
-    .call(() => rain.setIntensity(0.24), [], 0.6)
-    .to(vignetteMat, { opacity: 1, duration: 2.2, ease: 'power1.out' }, 1.2)
-    // 字元縮成圓點，照片的細節這時才真正浮現
-    .to(uniforms.uGlyphMix, { value: 1, duration: 3.0, ease: 'power2.inOut' }, 2.6)
-    .call(() => onCaption('人臉辨識完成 // FACE_MATCH: 100%'), [], 4.4)
+  // 全長 4.6 秒。四條線刻意大量重疊 —— 一段一段等它跑完就會拖成十秒，
+  // 而「聚合」「解析」「上色」本來就可以同時發生。
+  tl.to(uniforms.uAssemble, { value: 1, duration: 2.4, ease: 'power2.out' }, 0)
+    .to(uniforms.uReveal, { value: 1, duration: 2.0, ease: 'power1.inOut' }, 0.1)
+    // 字縮成圓點，照片的細節這時才真正浮現
+    .to(uniforms.uGlyphMix, { value: 1, duration: 1.5, ease: 'power2.inOut' }, 1.5)
     // 綠色褪去，還原照片原本的顏色
-    .to(uniforms.uColorMix, { value: 1, duration: 3.2, ease: 'power1.inOut' }, 4.2)
-    .call(() => rain.setIntensity(0.1), [], 4.6)
-    .call(() => onCaption('色彩還原完成 // TRUE_COLOR restored'), [], 6.6)
-    .to(heartMaterial, { opacity: 0.9, duration: 1, ease: 'power1.out' }, 6.8)
-    .to(heartLine.scale, { x: 1, y: 1, z: 1, duration: 1.1, ease: 'back.out(1.8)' }, 6.8)
-    .to(glowMaterial, { opacity: 0.28, duration: 1.4, ease: 'power1.out' }, 7.0)
-    .call(() => onCaption('SYNC_COMPLETE：兩顆心已成功配對 ♥'), [], 7.9)
-    .call(() => onReady(), [], 8.8);
+    .to(uniforms.uColorMix, { value: 1, duration: 1.6, ease: 'power1.inOut' }, 2.2)
+    .to(vignetteMat, { opacity: 0.82, duration: 1.4, ease: 'power1.out' }, 0.5)
+    .call(() => rain.setIntensity(0.26), [], 0.5)
+    .call(() => rain.setIntensity(0.1), [], 2.4)
+    // 鏡頭：從側後方推進到正面。它比任何一條資料線都長，
+    // 收尾那一段的「還在慢慢靠近」就是整段的呼吸。
+    .to(camState, { dolly: 1.0, duration: 4.4, ease: 'power2.out' }, 0)
+    .to(camState, { swing: 0.02, duration: 4.4, ease: 'power2.inOut' }, 0)
+    .to(camState, { lift: 0, duration: 4.0, ease: 'power2.inOut' }, 0)
+    .to(camState, { roll: 0, duration: 3.4, ease: 'power1.inOut' }, 0.4)
+    // 心形收尾
+    .to(heartMaterial, { opacity: 0.9, duration: 0.5, ease: 'power1.out' }, 3.5)
+    .to(heartLine.scale, { x: 1, y: 1, z: 1, duration: 0.7, ease: 'back.out(2)' }, 3.5)
+    .to(glowMaterial, { opacity: 0.3, duration: 0.7, ease: 'power1.out' }, 3.6)
+    .call(() => onReady(), [], 4.6);
 
   // ---------- Render Loop ----------
   function animate() {
     if (disposed) return;
     const t = clock.getElapsedTime();
     heartLine.rotation.z = Math.sin(t * 0.6) * 0.02;
-    glowSphere.material.opacity = glowMaterial.opacity * (0.85 + Math.sin(t * 2.4) * 0.15);
+    glowSphere.scale.setScalar(0.94 + Math.sin(t * 2.4) * 0.06);
 
-    // 視差幅度刻意壓小：照片是有細節的影像，鏡頭晃太大會讓五官看起來在游動
-    camera.position.x += (state.mouseX * 0.22 - camera.position.x) * 0.03;
-    camera.position.y += (-state.mouseY * 0.15 - camera.position.y) * 0.03;
-    camera.lookAt(0, 0, 0);
+    // 機位以照片中心為圓心：swing 是水平擺角，dolly 是距離倍率。
+    // 兩個不同週期的正弦當手持晃動 —— 幅度只有幾公分，目的是讓畫面
+    // 「不是完全靜止」，不是要讓人看出鏡頭在晃。
+    const dist = fitDistance * camState.dolly;
+    const sway = Math.sin(t * 0.85) * 0.035 + Math.sin(t * 0.31) * 0.02;
+    const bob = Math.sin(t * 0.62) * 0.03;
+
+    // 滑鼠視差疊在運鏡之上，幅度壓得很小：照片是有細節的影像，
+    // 鏡頭晃太大會讓五官看起來在游動
+    const swing = camState.swing + state.mouseX * 0.05 + sway * 0.35;
+    camera.position.set(
+      Math.sin(swing) * dist,
+      camState.lift + bob - state.mouseY * 0.12,
+      Math.cos(swing) * dist
+    );
+    camera.lookAt(0, camState.lift * 0.25, 0);
+    // 鏡頭自身的傾斜，收尾時歸零 —— 手持鏡頭很少是完全水平的
+    camera.rotateZ(camState.roll + sway * 0.06);
 
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
@@ -375,7 +426,11 @@ export function createGroomScene(container, { onCaption, onProgress, onReady, ph
       heartMaterial.opacity = 0.9;
       heartLine.scale.set(1, 1, 1);
       glowMaterial.opacity = 0.28;
-      vignetteMat.opacity = 1;
+      vignetteMat.opacity = 0.82;
+      camState.dolly = 1;
+      camState.swing = 0.02;
+      camState.lift = 0;
+      camState.roll = 0;
       rain.setIntensity(0.1);
     },
     dispose() {
@@ -393,6 +448,7 @@ export function createGroomScene(container, { onCaption, onProgress, onReady, ph
       heartMaterial.dispose();
       glowGeometry.dispose();
       glowMaterial.dispose();
+      glowTexture.dispose();
       vignetteGeo.dispose();
       vignetteMat.dispose();
       vignetteTexture.dispose();
