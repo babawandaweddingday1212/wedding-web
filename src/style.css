@@ -839,7 +839,17 @@ a {
 
 .transport__map {
   width: 100%;
+  /* height: auto 不能省。<img> 上寫了 width/height 屬性（那是為了讓瀏覽器
+     先留好位置、避免圖載入時版面位移），但只要 CSS 只設了 width，
+     高度就會沿用屬性上的那個 999px —— 圖會被縱向拉長。
+     height: auto 讓高度回到由原始比例決定。 */
+  height: auto;
+  /* 原圖是 1043px 寬。放大到超過原尺寸只會糊掉，寧可讓它在寬螢幕上
+     留白置中，也不要撐滿。 */
+  max-width: 1043px;
   margin-top: 1.8rem;
+  margin-inline: auto;
+  display: block;
   border-radius: 14px;
   box-shadow: 0 8px 24px rgba(42, 38, 34, 0.1);
 }
