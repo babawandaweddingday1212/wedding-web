@@ -86,7 +86,7 @@ export function rsvpFormMarkup(side) {
       <div class="form-row form-row--split">
         <div class="form-row">
           <label for="rsvp-phone">聯絡電話</label>
-          <input type="tel" id="rsvp-phone" name="phone" placeholder="0900-000-000" />
+          <input type="tel" id="rsvp-phone" name="phone" placeholder="0900000000" />
         </div>
         <div class="form-row">
           <label for="rsvp-side">賓客身份</label>
