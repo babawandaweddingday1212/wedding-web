@@ -835,6 +835,24 @@ a {
 /* 表單卡片的左右緣要對齊上方那兩行說明文字 —— 兩者都吃 .info__section
    的寬度，所以這裡不再另外設 max-width。曾經收窄到 640px 並置中，
    結果卡片比文字窄一截，看起來像縮排錯了。 */
+
+/* ⚠️ 這一組 min-width: 0 是窄螢幕上不跑版的關鍵，不要拿掉。
+   grid 項目的 min-width 預設是 auto，也就是「不會縮到比內容的最小寬度還窄」。
+   而 <input> 的最小寬度是由 size 屬性決定的（預設 20 個字元），在 iOS 上
+   字級被我們設成 16px，換算起來將近 190px。
+   於是在 390px 的 iPhone 上，「大人 / 小孩」那種兩欄的列會變成
+   190 + 190 + gap ≈ 400px —— 比容器還寬。更糟的是 .rsvp-form 本身也是
+   grid，它的欄寬取所有列的最大值，所以那一列撐開之後，整張表單的每一列
+   都跟著變成 400px 寬，全部往右邊溢出（賓客回報的就是這個畫面）。
+   min-width: 0 解除那個下限，width: 100% 再讓輸入框乖乖填滿欄位。 */
+.rsvp-form,
+.form-row,
+.form-row--split,
+.form-row--attendance,
+.form-row--checkbox {
+  min-width: 0;
+}
+
 .rsvp-form {
   display: grid;
   gap: 1.1rem;
@@ -860,6 +878,10 @@ a {
 .form-row input[type='number'],
 .form-row textarea,
 .form-row select {
+  /* 見上面那段說明：width + min-width 一起下，輸入框才不會用它的
+     固有寬度把整張表單撐開 */
+  width: 100%;
+  min-width: 0;
   border: 1px solid rgba(184, 146, 90, 0.35);
   border-radius: 10px;
   padding: 0.7rem 0.9rem;
