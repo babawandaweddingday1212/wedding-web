@@ -764,7 +764,9 @@ a {
 
 .schedule-title {
   font-weight: 700;
-  margin-right: 0.4rem;
+  /* 標題與說明是同一行的兩段文字，只靠字重與顏色分辨。
+     間距要拉得比一般字距明顯，才讀得出是兩件事而不是一句話。 */
+  margin-right: 0.9rem;
 }
 
 .schedule-desc {
@@ -855,13 +857,12 @@ a {
 }
 
 /* --- RSVP Form --- */
-/* 表單嵌在資訊頁最後一段裡。段落本身有 880px，但輸入框排到那麼寬
-   反而難填，所以自己再收窄一點並置中。 */
+/* 表單卡片的左右緣要對齊上方那兩行說明文字 —— 兩者都吃 .info__section
+   的寬度，所以這裡不再另外設 max-width。曾經收窄到 640px 並置中，
+   結果卡片比文字窄一截，看起來像縮排錯了。 */
 .rsvp-form {
   display: grid;
   gap: 1.1rem;
-  max-width: 640px;
-  margin: 0 auto;
   background: #fff;
   padding: 1.8rem;
   border-radius: 18px;
