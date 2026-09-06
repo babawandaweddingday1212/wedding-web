@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-// GSAP 只取 core：這兩段動畫補間的都是純 JS 物件（uniform、material、
-// Object3D 的位置與縮放），完全沒有碰 DOM 樣式，所以用不到預設進入點會
-// 一併帶進來的 CSSPlugin。power / back 這些 ease 本來就在 core 裡。
+// GSAP 只取 core：這段動畫補間的都是純 JS 物件（uniform、material、Object3D
+// 的位置與縮放），完全沒有碰 DOM 樣式，所以用不到預設進入點會一併帶進來的
+// CSSPlugin。power / back 這些 ease 本來就在 core 裡。
 import gsap from 'gsap/gsap-core';
 import { createPrintedPortraitTexture } from '../utils/printedPortrait.js';
 
@@ -9,22 +9,24 @@ import { createPrintedPortraitTexture } from '../utils/printedPortrait.js';
  * 女方賓客動畫 —— 印刷廠：CMYK 四色印出合照
  *
  * 全長 4.6 秒，沒有任何文字說明：
- *   0.0s 紙從畫面外翻著飛進來，鏡頭在低處、偏側面
- *   0.8s 四支滾輪接連刷過（青→洋紅→黃→黑），刷過的地方才有墨
- *   2.5s 成品浮起、暖光暈開，鏡頭同時繞到正面並推近
+ *   0.0s 鏡頭貼在紙面上，近到只看得見紙纖維與網點 —— 印刷放大鏡的視角
+ *   0.4s 四支滾輪接連刷過，網點一顆顆長出來（青→洋紅→黃→黑）
+ *   0.8s 鏡頭一路拉遠，網點自己收斂成照片
+ *   2.4s 最後一道黑版故意套印不準，再喀一下對準，整張圖瞬間變銳利
+ *   2.8s 紙轉成四分之三角、微微浮起，暖光暈開
  *
- * 顏色不是用「淡入」硬疊的，而是照真正的減色法混色：
- * 先把照片分解成 CMYK 四個色版，紙面從白開始，每道墨吸掉對應的波長。
- * 所以只刷青色時畫面是青色調的，疊上洋紅後轉紫，再加黃才回到膚色 ——
- * 這正是印刷疊印該有的樣子。
+ * 為什麼是這個表現方式：
+ * 舊版是「整張紙從頭到尾平擺在畫面中央被刷四道」—— 資訊都對，但看起來
+ * 像投影片。這一版把印刷這件事最迷人的兩個瞬間放大：
+ *   1. 網點。四色網屏各自有固定角度（青 15°、洋紅 75°、黃 0°、黑 45°），
+ *      疊在一起會長出玫瑰紋。那是印刷品在放大鏡下的樣子，一看就知道是印的。
+ *      鏡頭從貼著紙面拉遠，網點不用做任何事就會自己收斂成照片。
+ *   2. 套印。四個色版對不準時邊緣會出現彩色重影，對準的那一下整張圖會
+ *      「喀」地變銳利 —— 印刷廠每天在追的就是那一下。
  *
- * 這一版重寫的是「質感」，核心的四色疊印沒有動：
- *   - 紙不再是一塊平板：頂點著色器上有行進波，紙面自己會抖、會捲，
- *     而且法線是解析算出來的，光打上去有真正的明暗起伏
- *   - 場景給了環境貼圖與 ACES 色調映射，滾輪才有金屬與濕墨的反射，
- *     不然 MeshStandardMaterial 在只有平行光的場景裡一定是塑膠感
- *   - 鏡頭全程都在繞著紙走（球座標的方位角／仰角／距離同時補間），
- *     紙也不再是固定角度正對鏡頭，而是斜著的四分之三角度
+ * 顏色仍然是真正的減色法混色：照片先分成 CMYK 四個色版，紙面從白開始，
+ * 每道墨吸掉對應的波長。只刷青色時畫面是青色調，疊上洋紅後轉紫，
+ * 再加黃才回到膚色。
  *
  * @param {HTMLElement} container
  * @param {{ onProgress:(pct:number)=>void, onReady:()=>void, photo?:HTMLImageElement }} callbacks
@@ -40,7 +42,7 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
   container.appendChild(glCanvas);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(46, 1, 0.05, 100);
+  const camera = new THREE.PerspectiveCamera(46, 1, 0.02, 100);
 
   const renderer = new THREE.WebGLRenderer({ canvas: glCanvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -75,9 +77,9 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
   scene.background = createBackdrop();
 
   // ---------- 環境貼圖 ----------
-  // 一張手繪的等距長方投影：上半是柔和的棚燈，中間橫過一條亮帶（當作
-  // 廠房的長條燈管），下半收暗。滾輪的金屬與清漆層靠它才有東西可以反射
-  // —— 只有平行光的話，反射計算幾乎沒有輸入，再怎麼調參數都是塑膠。
+  // 一張手繪的等距長方投影：上半是柔和的棚燈，中間橫過一條亮帶（廠房的
+  // 長條燈管），下半收暗。滾輪的金屬與清漆層靠它才有東西可以反射 ——
+  // 只有平行光的話，反射計算幾乎沒有輸入，再怎麼調參數都是塑膠。
   function createEnvironment() {
     const c = document.createElement('canvas');
     c.width = 256;
@@ -92,7 +94,6 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
     x.fillStyle = g;
     x.fillRect(0, 0, 256, 128);
 
-    // 長條燈管：反射到滾輪上就是那道會跟著滾動跑的亮線
     const strip = x.createLinearGradient(0, 26, 0, 46);
     strip.addColorStop(0, 'rgba(255,255,255,0)');
     strip.addColorStop(0.5, 'rgba(255,250,240,1)');
@@ -100,7 +101,6 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
     x.fillStyle = strip;
     x.fillRect(0, 26, 256, 20);
 
-    // 幾盞暖色點光源，讓反射不是一片均勻
     [
       [46, 70, 26],
       [150, 58, 20],
@@ -121,9 +121,8 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
   scene.environment = createEnvironment();
 
   // ---------- 燈光 ----------
-  // 環境光刻意壓低。前一版是 0.85，等於把每個面都填到差不多亮，
-  // 立體感全被洗掉 —— 這就是「打光很平」的來源。
-  // 現在改成低環境 + 一盞明確的主光 + 一盞冷色補光 + 一盞背後的輪廓光。
+  // 低環境光 + 一盞明確的主光 + 冷色補光 + 背後的輪廓光。
+  // 環境光開太大（前一版 0.85）會把每個面都填到差不多亮，立體感全被洗掉。
   scene.add(new THREE.AmbientLight(0xfff3e8, 0.22));
 
   const keyLight = new THREE.DirectionalLight(0xfff1de, 2.6);
@@ -134,7 +133,6 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
   fillLight.position.set(-5, -1.5, 3);
   scene.add(fillLight);
 
-  // 輪廓光：從紙的後上方打過來，把紙的邊緣從背景裡切出來
   const rimLight = new THREE.DirectionalLight(0xffd9c0, 1.6);
   rimLight.position.set(-2.4, 2.2, -4.5);
   scene.add(rimLight);
@@ -151,16 +149,36 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
 
   // 四道色版各自的推進位置（-0.2 = 還沒開始，1.2 = 整面刷完）
   const passes = { c: -0.2, m: -0.2, y: -0.2, k: -0.2 };
+  // 四個色版的套印偏移（UV 單位）。開場刻意對不準，之後補間回 0。
+  const reg = {
+    cx: -0.006, cy: 0.004,
+    mx: 0.005, my: 0.005,
+    yx: 0.004, yy: -0.006,
+    kx: 0.014, ky: 0.009,
+  };
+
   const sheetUniforms = {
     uPhoto: { value: printedTexture },
     uPass: { value: new THREE.Vector4(-0.2, -0.2, -0.2, -0.2) },
-    uSpread: { value: 0.14 },
+    // 墨在滾輪正前方堆起來的寬度。窄一點才像壓上去的，不是淡入的。
+    uSpread: { value: 0.05 },
     // 去底色比例。0.75 是實際算圖比較過的結果：C/M/Y 三道都夠濃，
     // 最後一道 K 又還能明顯把深度拉回來，當作收尾最有戲。
     uUcr: { value: 0.75 },
+    // 網線頻率（沿紙高的網點數）。135 在拉遠後仍看得出網紋，
+    // 貼近時則是清楚的玫瑰紋 —— 這個數字就是「印刷感」的旋鈕。
+    uFreq: { value: 128 },
+    // 網屏強度。拉遠之後網點小於兩三個螢幕像素，硬畫下去只會跟像素格
+    // 打架長出摩爾紋 —— 而真實的印刷品拿遠了本來就分辨不出網點，
+    // 眼睛看到的是連續調。所以拉遠時把網屏往連續調收，只留一點顆粒。
+    uScreenMix: { value: 1 },
+    uAspect: { value: SHEET_W / SHEET_H },
+    uRegC: { value: new THREE.Vector2() },
+    uRegM: { value: new THREE.Vector2() },
+    uRegY: { value: new THREE.Vector2() },
+    uRegK: { value: new THREE.Vector2() },
     uTime: { value: 0 },
-    // 紙的抖動幅度：剛飛進來時大，落定後留一點點，成品浮起時再收小
-    uFlutter: { value: 1.6 },
+    uFlutter: { value: 0.55 },
     uLightDir: { value: new THREE.Vector3(3.2, 4.6, 5.2).normalize() },
   };
 
@@ -208,6 +226,13 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
         uniform vec4 uPass;
         uniform float uSpread;
         uniform float uUcr;
+        uniform float uFreq;
+        uniform float uScreenMix;
+        uniform float uAspect;
+        uniform vec2 uRegC;
+        uniform vec2 uRegM;
+        uniform vec2 uRegY;
+        uniform vec2 uRegK;
 
         varying vec2 vUv;
         varying vec3 vNormal;
@@ -218,43 +243,85 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
           return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
         }
 
-        // 單一道色版在這個位置的著墨量：刷過去的地方全滿，
-        // 滾輪正前方用網點抖動做出「墨剛壓上去」的顆粒邊緣
-        float coverage(float pass, float u, vec2 cell, float seed) {
-          float solid = smoothstep(0.0, uSpread, pass - u);
-          float n = hash(cell + seed);
-          // 乘上 step(0.001, solid)：完全還沒刷到的地方一定是 0。
-          // 少了這一項，hash 剛好等於 0 的格子會在整張紙上散出單格彩點。
-          return step(n, solid) * step(0.001, solid);
-        }
-
-        void main() {
-          vec3 photo = texture2D(uPhoto, vUv).rgb;
-
-          // RGB → CMYK 分色，採「部分去底色」（uUcr）。
-          // 完全去底色（uUcr = 1）會把所有中性濃度都搬到 K，
-          // 而這張合照是暖調的，青版會因此幾乎全白 —— 第一道滾輪等於白刷。
-          // 保留一部分底色後四道才都看得見，K 也還留有足夠份量收尾。
+        // RGB → CMYK 分色，採「部分去底色」（uUcr）。
+        // 完全去底色（uUcr = 1）會把所有中性濃度都搬到 K，而這張合照是
+        // 暖調的，青版會因此幾乎全白 —— 第一道滾輪等於白刷。保留一部分
+        // 底色後四道才都看得見，K 也還留有足夠份量收尾。
+        // 回傳 xyz = CMY，w = K。
+        vec4 separate(vec2 uv) {
+          vec3 photo = texture2D(uPhoto, clamp(uv, 0.0, 1.0)).rgb;
           float kRaw = min(1.0 - photo.r, min(1.0 - photo.g, 1.0 - photo.b));
           float K = kRaw * uUcr;
           float inv = max(1.0 - K, 0.001);
-          // 由 K 反推 CMY，四道刷完的結果會精確還原成原圖
-          vec3 ink = clamp(1.0 - photo / inv, 0.0, 1.0);
+          return vec4(clamp(1.0 - photo / inv, 0.0, 1.0), K);
+        }
 
-          // 每個色版用不同的亂數種子，等同印刷的不同網屏角度，
-          // 四道墨才不會全部壓在同一個點上
-          vec2 cell = floor(vUv * vec2(300.0, 380.0));
-          float cC = coverage(uPass.x, vUv.x, cell, 11.3);
-          float cM = coverage(uPass.y, vUv.x, cell, 47.9);
-          float cY = coverage(uPass.z, vUv.x, cell, 83.1);
-          float cK = coverage(uPass.w, vUv.x, cell, 129.7);
+        // 旋轉網屏上的一顆網點。
+        // 每個色版有自己的網屏角度（青 15°、洋紅 75°、黃 0°、黑 45°）——
+        // 那是真的印刷用的角度，四個角度錯開疊印才會長出玫瑰紋，
+        // 全部同角度的話會出現大片撞網的摩爾紋。
+        // 網點面積正比於濃度，所以半徑取 sqrt。
+        float screenDot(float value, vec2 uv, float ang) {
+          vec2 p = vec2(uv.x * uAspect, uv.y) * uFreq;
+          float c = cos(ang);
+          float s = sin(ang);
+          vec2 r = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
+          vec2 cell = fract(r) - 0.5;
+          float d = length(cell) * 2.0;
+          float radius = sqrt(clamp(value, 0.0, 1.0)) * 1.08;
+          return smoothstep(radius, radius - 0.16, d);
+        }
 
-          // 減色法疊印：紙是白的，每道墨各自吸掉一段波長
+        // 滾輪推進到哪，墨就上到哪。邊界用一小段漸變，像墨剛被壓上去。
+        float sweep(float pass, float u) {
+          return smoothstep(0.0, uSpread, pass - u);
+        }
+
+        void main() {
+          // 每個色版在自己的偏移位置取樣 —— 這就是套印不準的來源：
+          // 四個版沒對齊時，邊緣會出現彩色重影
+          vec4 sepC = separate(vUv + uRegC);
+          vec4 sepM = separate(vUv + uRegM);
+          vec4 sepY = separate(vUv + uRegY);
+          vec4 sepK = separate(vUv + uRegK);
+
+          float amtC = sepC.x * sweep(uPass.x, vUv.x);
+          float amtM = sepM.y * sweep(uPass.y, vUv.x);
+          float amtY = sepY.z * sweep(uPass.z, vUv.x);
+          float amtK = sepK.w * sweep(uPass.w, vUv.x);
+
+          // 文字與線稿不上網屏。真正的印刷只有連續調的影像會做網點，
+          // 卡片上的字是實地印上去的 —— 把字也打成網點的話，小字會被
+          // 網屏吃掉變成一團麻點，這裡整張卡的文案就全毀了。
+          // 判斷方式：黑版濃到接近實地的地方就是線稿。
+          float lineArt = smoothstep(0.80, 0.93, sepK.w);
+
+          // 網屏 → 連續調的比例：lineArt（文字）永遠是連續調，
+          // 其餘部分照 uScreenMix 決定還看得見多少網點。
+          // 變數不能叫 flat —— 那是 GLSL ES 3.0 的內插修飾詞，是保留字。
+          float toneFlat = max(lineArt, 1.0 - uScreenMix);
+
+          float covC = mix(screenDot(amtC, vUv + uRegC, radians(15.0)), amtC, toneFlat);
+          float covM = mix(screenDot(amtM, vUv + uRegM, radians(75.0)), amtM, toneFlat);
+          float covY = mix(screenDot(amtY, vUv + uRegY, radians(0.0)), amtY, toneFlat);
+          float covK = mix(screenDot(amtK, vUv + uRegK, radians(45.0)), amtK, toneFlat);
+
+          // 減色法疊印：紙是白的，網點是實地的墨，光穿過墨層被吸掉一部分。
+          //
+          // 這裡用的是真實油墨的透射色，而不是「青墨把 R 乘以 0」那種理想模型。
+          // 理想模型算出來的青是 #00FFFF —— 那是螢幕的螢光青，印刷機印不出來；
+          // 真正的 process cyan 偏一點藍綠、亮度也低一階。四色都換成實際色票之後，
+          // 疊印的結果才會是印刷品的顏色，而不是螢幕的顏色。
+          const vec3 INK_C = vec3(0.00, 0.68, 0.94);
+          const vec3 INK_M = vec3(0.93, 0.12, 0.55);
+          const vec3 INK_Y = vec3(1.00, 0.94, 0.05);
+          const vec3 INK_K = vec3(0.09, 0.09, 0.09);
+
           vec3 col = vec3(0.995, 0.982, 0.952);
-          col.r *= 1.0 - ink.r * cC;
-          col.g *= 1.0 - ink.g * cM;
-          col.b *= 1.0 - ink.b * cY;
-          col *= 1.0 - K * cK;
+          col *= mix(vec3(1.0), INK_C, covC);
+          col *= mix(vec3(1.0), INK_M, covM);
+          col *= mix(vec3(1.0), INK_Y, covY);
+          col *= mix(vec3(1.0), INK_K, covK);
 
           // ---- 打光 ----
           // 紙很薄，光會透過去，所以漫射用「包覆式」而不是硬切在 90 度：
@@ -270,28 +337,31 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
           vec3 H = normalize(L + V);
           float spec = pow(clamp(dot(N, H), 0.0, 1.0), 46.0) * 0.16;
 
-          // 紙纖維：極細的顆粒，避免大面積留白看起來像一塊乾淨的塑膠
-          float fiber = hash(floor(vUv * vec2(1400.0, 1800.0))) * 0.035 - 0.015;
+          // 紙纖維：貼近看得到的顆粒。這是開場那顆特寫的主角之一 ——
+          // 沒有它，極近距離下紙面會是一塊光滑的塑膠。
+          // 顆粒強度跟著網屏一起收：拉遠之後纖維本來就看不見了。
+          float fiber = (hash(floor(vUv * vec2(1400.0, 1800.0))) * 0.075 - 0.032)
+                        * (0.3 + 0.7 * uScreenMix);
 
-          // 滾輪的接觸陰影：每一道正在推進的色版，在它的著墨邊界壓一條暗痕。
-          // 這條陰影是把滾輪「黏」在紙上的關鍵 —— 少了它，滾輪就只是一根
-          // 浮在紙前面的管子。
+          // 滾輪的接觸陰影：正在推進的色版在著墨邊界壓一條暗痕。
+          // 這條陰影是把滾輪「黏」在紙上的關鍵。
           float shade = 0.0;
-          shade = max(shade, smoothstep(0.10, 0.0, abs(uPass.x - vUv.x)) * step(-0.1, uPass.x) * step(uPass.x, 1.15));
-          shade = max(shade, smoothstep(0.10, 0.0, abs(uPass.y - vUv.x)) * step(-0.1, uPass.y) * step(uPass.y, 1.15));
-          shade = max(shade, smoothstep(0.10, 0.0, abs(uPass.z - vUv.x)) * step(-0.1, uPass.z) * step(uPass.z, 1.15));
-          shade = max(shade, smoothstep(0.10, 0.0, abs(uPass.w - vUv.x)) * step(-0.1, uPass.w) * step(uPass.w, 1.15));
+          shade = max(shade, smoothstep(0.09, 0.0, abs(uPass.x - vUv.x)) * step(-0.1, uPass.x) * step(uPass.x, 1.15));
+          shade = max(shade, smoothstep(0.09, 0.0, abs(uPass.y - vUv.x)) * step(-0.1, uPass.y) * step(uPass.y, 1.15));
+          shade = max(shade, smoothstep(0.09, 0.0, abs(uPass.z - vUv.x)) * step(-0.1, uPass.z) * step(uPass.z, 1.15));
+          shade = max(shade, smoothstep(0.09, 0.0, abs(uPass.w - vUv.x)) * step(-0.1, uPass.w) * step(uPass.w, 1.15));
 
-          gl_FragColor = vec4((col * diff + spec + fiber) * (1.0 - shade * 0.32), 1.0);
+          gl_FragColor = vec4((col * diff + spec + fiber) * (1.0 - shade * 0.3), 1.0);
         }
       `,
     })
   );
 
-  const sheet = new THREE.Mesh(track(new THREE.PlaneGeometry(SHEET_W, SHEET_H, 48, 48)), sheetMat);
+  // 分段數給高一點：開場是貼著紙面的特寫，頂點波的折線在那個距離下會露餡
+  const sheet = new THREE.Mesh(track(new THREE.PlaneGeometry(SHEET_W, SHEET_H, 72, 72)), sheetMat);
   // 紙的基準姿態由時間軸補間，實際 rotation 每一幀再疊上晃動（見 render loop）
-  const sheetBase = { rx: 0.42, ry: -0.92, rz: 0.34 };
-  sheet.position.set(-2.6, -1.8, -2.4);
+  const sheetBase = { rx: 0.03, ry: -0.1, rz: 0.01 };
+  sheet.position.set(0, 0, 0);
   scene.add(sheet);
 
   // 紙張後方的柔光暈，最後成品浮起時亮起
@@ -326,23 +396,23 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
   const INKS = [
     // 油墨的顏色比印刷色票深一階：滾輪上那層是「濕的濃墨」，
     // 用色票的亮度加上清漆反光會變成糖果塑膠管。
-    { key: 'c', color: 0x00587c, label: 'CYAN' },
-    { key: 'm', color: 0x7d0046, label: 'MAGENTA' },
-    { key: 'y', color: 0x9c7200, label: 'YELLOW' },
-    { key: 'k', color: 0x100f0c, label: 'BLACK' },
+    { key: 'c', color: 0x00587c },
+    { key: 'm', color: 0x7d0046 },
+    { key: 'y', color: 0x9c7200 },
+    { key: 'k', color: 0x100f0c },
   ];
 
   const ROLLER_R = 0.105;
-  const rollerGeo = track(new THREE.CylinderGeometry(ROLLER_R, ROLLER_R, SHEET_H + 0.34, 40));
+  const rollerGeo = track(new THREE.CylinderGeometry(ROLLER_R, ROLLER_R, SHEET_H + 0.34, 44));
   const axleGeo = track(new THREE.CylinderGeometry(0.035, 0.035, SHEET_H + 0.85, 12));
   const capGeo = track(new THREE.CylinderGeometry(0.058, 0.058, 0.12, 16));
 
   const rollers = INKS.map((ink) => {
     const group = new THREE.Group();
 
-    // 滾輪是「沾滿油墨的橡膠輥」：本體霧面（墨吃光），
-    // 上面再蓋一層清漆當作濕墨的反光。單用 Standard 調高光澤只會像塑膠，
-    // clearcoat 才是「一層濕的東西蓋在霧面上」。
+    // 滾輪是沾滿油墨的橡膠輥：本體霧面（墨吃光），上面再蓋一層清漆當作
+    // 濕墨的反光。單用 Standard 調高光澤只會像塑膠，clearcoat 才是
+    // 「一層濕的東西蓋在霧面上」。
     const mat = track(
       new THREE.MeshPhysicalMaterial({
         color: ink.color,
@@ -420,7 +490,7 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
   const petals = [];
   for (let i = 0; i < 28; i++) {
     const p = new THREE.Mesh(petalGeo, petalMat);
-    p.position.set((Math.random() - 0.5) * 13, (Math.random() - 0.5) * 9, -4 + Math.random() * 7);
+    p.position.set((Math.random() - 0.5) * 13, (Math.random() - 0.5) * 9, -4 + Math.random() * 5);
     p.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
     p.userData = {
       fall: 0.12 + Math.random() * 0.22,
@@ -453,7 +523,7 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
   for (let i = 0; i < BOKEH; i++) {
     bokehPos[i * 3] = (Math.random() - 0.5) * 15;
     bokehPos[i * 3 + 1] = (Math.random() - 0.5) * 10;
-    bokehPos[i * 3 + 2] = -6 + Math.random() * 5;
+    bokehPos[i * 3 + 2] = -6 + Math.random() * 4;
   }
   bokehGeo.setAttribute('position', new THREE.BufferAttribute(bokehPos, 3));
   const bokeh = new THREE.Points(
@@ -478,14 +548,15 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
   let fitDistance = 6.4;
   function fitCamera() {
     const halfFov = THREE.MathUtils.degToRad(camera.fov) / 2;
-    const distH = (SHEET_H * 1.3) / 2 / Math.tan(halfFov);
+    const distH = (SHEET_H * 1.28) / 2 / Math.tan(halfFov);
     const distW = (SHEET_W * 1.5) / 2 / (Math.tan(halfFov) * camera.aspect);
     fitDistance = Math.max(distH, distW);
   }
 
   // 鏡頭狀態（球座標）：az 方位角、el 仰角、dist 距離倍率、
-  // targetY 看向的高度、roll 鏡頭自身傾斜
-  const camState = { az: 0.44, el: -0.16, dist: 1.34, targetY: -0.28, roll: 0.05 };
+  // targetX/Y 看向紙上的哪一點、roll 鏡頭自身傾斜。
+  // 起手是貼在紙面左側的特寫（dist 0.17），那裡正好是第一道墨落下的位置。
+  const camState = { az: -0.4, el: 0.16, dist: 0.21, targetX: -0.58, targetY: 0.32, roll: 0.05 };
 
   function resize() {
     const w = container.clientWidth;
@@ -507,19 +578,11 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
     onUpdate: () => onProgress(Math.round(tl.progress() * 100)),
   });
 
-  // 1) 紙翻著飛進畫面。位置與旋轉用不同長度的 ease，落定時才有「甩過頭
-  //    再收回來」的手感，而不是兩軸同時到位的機器動作。
-  tl.to(sheet.position, { x: 0, y: -0.05, z: 0, duration: 1.0, ease: 'power3.out' }, 0)
-    .to(sheetBase, { rx: 0.07, ry: -0.26, rz: 0.02, duration: 1.25, ease: 'power2.out' }, 0)
-    .to(sheetUniforms.uFlutter, { value: 0.62, duration: 1.3, ease: 'power2.out' }, 0);
-
-  // 2) 四道色版接連刷過。刻意重疊：真的印刷機也是四個色座同時在跑，
+  // 1) 四道色版接連刷過。刻意重疊：真的印刷機也是四個色座同時在跑，
   //    而且四道各等一輪的話光這段就要八秒。
-  const PASS_START = 0.7;
-  // 間隔比單道的行程長，畫面上最多同時兩支滾輪 —— 四支一起跑的話
-  // 照片整段都被管子擋著，等於印了半天什麼也沒看到。
-  const PASS_GAP = 0.46;
-  const PASS_DUR = 0.62;
+  const PASS_START = 0.18;
+  const PASS_GAP = 0.4;
+  const PASS_DUR = 0.7;
 
   INKS.forEach((ink, i) => {
     const at = PASS_START + i * PASS_GAP;
@@ -530,36 +593,51 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
         roller.group.visible = true;
       },
       [],
-      at - 0.18
+      at - 0.15
     )
-      .to([roller.mat, roller.axleMat], { opacity: 1, duration: 0.22 }, at - 0.18)
+      .to([roller.mat, roller.axleMat], { opacity: 1, duration: 0.2 }, at - 0.15)
       .to(passes, { [ink.key]: 1.2, duration: PASS_DUR, ease: 'none' }, at)
-      .to([roller.mat, roller.axleMat], { opacity: 0, duration: 0.28 }, at + PASS_DUR)
+      .to([roller.mat, roller.axleMat], { opacity: 0, duration: 0.25 }, at + PASS_DUR)
       .call(
         () => {
           roller.group.visible = false;
         },
         [],
-        at + PASS_DUR + 0.28
+        at + PASS_DUR + 0.25
       );
   });
 
-  // 3) 成品浮起、暖光暈開、紙轉正面對鏡頭
-  const FINISH = PASS_START + PASS_GAP * 3 + PASS_DUR * 0.72;
-  tl.to(sheet.position, { y: 0.16, duration: 1.5, ease: 'power2.out' }, FINISH)
-    .to(sheetBase, { rx: 0.01, ry: -0.07, rz: 0, duration: 1.6, ease: 'power2.inOut' }, FINISH)
-    .to(sheetUniforms.uFlutter, { value: 0.3, duration: 1.6, ease: 'power2.out' }, FINISH)
-    .to(haloMat, { opacity: 0.9, duration: 1.2, ease: 'power1.out' }, FINISH)
-    .to(haloLight, { intensity: 2.2, duration: 1.2, ease: 'power1.out' }, FINISH);
+  // 2) 套印：前三道在鏡頭還很近的時候就慢慢收斂，最後一道黑版留到最後
+  //    才「喀」一下對準 —— back.out 的一點過衝就是那個機械感。
+  tl.to(reg, { cx: 0, cy: 0, duration: 1.4, ease: 'power2.inOut' }, 0.9)
+    .to(reg, { mx: 0, my: 0, duration: 1.4, ease: 'power2.inOut' }, 1.1)
+    .to(reg, { yx: 0, yy: 0, duration: 1.4, ease: 'power2.inOut' }, 1.3)
+    .to(reg, { kx: 0, ky: 0, duration: 0.5, ease: 'back.out(2.4)' }, 2.45);
 
-  // 4) 鏡頭：整段都在走。從低處側面繞到正面、同時推近，
-  //    最後 0.6 秒還在慢慢靠近 —— 那個「還沒停」就是收尾的呼吸。
-  tl.to(camState, { az: 0.06, duration: 4.2, ease: 'power2.inOut' }, 0)
-    .to(camState, { el: 0.05, duration: 4.2, ease: 'power2.inOut' }, 0)
-    .to(camState, { dist: 0.98, duration: 3.4, ease: 'power2.out' }, 0)
-    .to(camState, { dist: 0.94, duration: 1.2, ease: 'power1.inOut' }, 3.4)
-    .to(camState, { targetY: 0.06, duration: 3.6, ease: 'power2.inOut' }, 0)
-    .to(camState, { roll: 0, duration: 3.0, ease: 'power1.inOut' }, 0.3)
+  // 3) 鏡頭：從貼著紙面一路拉遠到整張紙。
+  //    網線頻率同時從 128 收到 300：這一步不是物理上真實的（真的印刷機
+  //    網線是固定的），但畫面上要同時成立兩件事 —— 貼著看要有大到看得見
+  //    玫瑰紋的網點，拉遠後又要細到能還原照片與讀得出卡片上的字。
+  //    頻率的變化被藏在鏡頭運動裡，看起來就是「距離拉開，畫面自己收斂」。
+  tl.to(sheetUniforms.uFreq, { value: 210, duration: 2.6, ease: 'power2.inOut' }, 0.7)
+    .to(sheetUniforms.uScreenMix, { value: 0.34, duration: 2.4, ease: 'power2.inOut' }, 0.9)
+    .to(camState, { dist: 0.88, duration: 2.9, ease: 'power2.inOut' }, 0.55)
+    .to(camState, { dist: 0.84, duration: 1.3, ease: 'power1.inOut' }, 3.4)
+    .to(camState, { az: 0.012, duration: 3.4, ease: 'power2.inOut' }, 0.3)
+    .to(camState, { el: 0.02, duration: 3.4, ease: 'power2.inOut' }, 0.3)
+    .to(camState, { targetX: 0, duration: 2.9, ease: 'power2.inOut' }, 0.55)
+    .to(camState, { targetY: 0.04, duration: 2.9, ease: 'power2.inOut' }, 0.55)
+    .to(camState, { roll: 0, duration: 2.6, ease: 'power1.inOut' }, 0.4);
+
+  // 4) 成品浮起、轉成四分之三角、暖光暈開
+  tl.to(sheet.position, { y: 0.14, duration: 1.5, ease: 'power2.out' }, 2.75)
+    // 定位時正對鏡頭，不留斜角。過程中的翻轉與微幅晃動都保留，
+    // 但最後停住的那個姿態是正的 —— 成品要像被端正地拿在眼前，
+    // 不是斜擺在那裡。
+    .to(sheetBase, { rx: 0, ry: 0, rz: 0, duration: 1.6, ease: 'power2.inOut' }, 2.75)
+    .to(sheetUniforms.uFlutter, { value: 0.22, duration: 1.6, ease: 'power2.out' }, 2.75)
+    .to(haloMat, { opacity: 0.9, duration: 1.2, ease: 'power1.out' }, 2.9)
+    .to(haloLight, { intensity: 2.2, duration: 1.2, ease: 'power1.out' }, 2.9)
     .call(() => onReady(), [], 4.6);
 
   // ---------- Render Loop ----------
@@ -570,9 +648,12 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
     const dt = Math.min(0.05, (now - lastTime) / 1000 || 0.016);
     lastTime = now;
 
-    // 把四道推進值送進 shader
     sheetUniforms.uPass.value.set(passes.c, passes.m, passes.y, passes.k);
     sheetUniforms.uTime.value = t;
+    sheetUniforms.uRegC.value.set(reg.cx, reg.cy);
+    sheetUniforms.uRegM.value.set(reg.mx, reg.my);
+    sheetUniforms.uRegY.value.set(reg.yx, reg.yy);
+    sheetUniforms.uRegK.value.set(reg.kx, reg.ky);
 
     // 紙的姿態＝時間軸給的基準 + 一直都在的微幅晃動。
     // 兩個週期不同的正弦，讓它讀起來像被氣流托著，而不是停在某個角度。
@@ -584,11 +665,10 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
     );
 
     // 滾輪位置直接由該色版的推進值換算，滾輪與著墨邊界永遠對得上。
-    // 座標是紙的區域座標（滾輪掛在 sheet 底下），所以紙一斜，滾輪跟著斜。
+    // 推進值的區間是 -0.2 ~ 1.2（頭尾各留一段，著墨邊界才能真的走完整張
+    // 紙），但滾輪本身要夾在紙的範圍內 —— 不然待命與收尾時會看到一根
+    // 管子浮在紙外面的空氣中。
     rollers.forEach((r) => {
-      // 推進值的區間是 -0.2 ~ 1.2（頭尾各留一段，著墨邊界才能真的走完
-      // 整張紙），但滾輪本身要夾在紙的範圍內 —— 不然待命與收尾時會看到
-      // 一根管子浮在紙外面的空氣中。
       const p = Math.min(1, Math.max(0, passes[r.key]));
       const x = -SHEET_W / 2 + p * SHEET_W;
       r.group.position.x = x;
@@ -598,7 +678,6 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
       lastPassX[r.key] = x;
     });
 
-    // 花瓣飄落
     petals.forEach((p) => {
       const d = p.userData;
       p.position.y -= d.fall * dt;
@@ -620,12 +699,14 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
     const az = camState.az + sway;
     const el = camState.el + Math.sin(t * 0.63) * 0.008;
     const d = fitDistance * camState.dist;
+    const tx = camState.targetX * SHEET_W * 0.5;
+    const ty = camState.targetY * SHEET_H * 0.5;
     camera.position.set(
-      Math.sin(az) * Math.cos(el) * d,
-      Math.sin(el) * d + camState.targetY * 0.3,
+      tx + Math.sin(az) * Math.cos(el) * d,
+      ty + Math.sin(el) * d,
       Math.cos(az) * Math.cos(el) * d
     );
-    camera.lookAt(0, camState.targetY, 0);
+    camera.lookAt(tx, ty, 0);
     camera.rotateZ(camState.roll + sway * 0.25);
 
     renderer.render(scene, camera);
@@ -634,22 +715,27 @@ export function createBrideScene(container, { onProgress, onReady, photo } = {})
   requestAnimationFrame(animate);
 
   return {
+    /** 跳到最後一格。開啟「減少動態效果」時由 pages/scene.js 直接呼叫。 */
     skipToEnd() {
       tl.progress(1);
       passes.c = passes.m = passes.y = passes.k = 1.2;
       sheetUniforms.uPass.value.set(1.2, 1.2, 1.2, 1.2);
-      sheetUniforms.uFlutter.value = 0.3;
-      sheet.position.set(0, 0.16, 0);
-      sheetBase.rx = 0.01;
-      sheetBase.ry = -0.07;
+      sheetUniforms.uFlutter.value = 0.22;
+      sheetUniforms.uFreq.value = 210;
+      sheetUniforms.uScreenMix.value = 0.34;
+      reg.cx = reg.cy = reg.mx = reg.my = reg.yx = reg.yy = reg.kx = reg.ky = 0;
+      sheet.position.set(0, 0.14, 0);
+      sheetBase.rx = 0;
+      sheetBase.ry = 0;
       sheetBase.rz = 0;
       rollers.forEach((r) => (r.group.visible = false));
       haloMat.opacity = 0.9;
       haloLight.intensity = 2.2;
-      camState.az = 0.06;
-      camState.el = 0.05;
-      camState.dist = 0.94;
-      camState.targetY = 0.06;
+      camState.az = 0.012;
+      camState.el = 0.02;
+      camState.dist = 0.84;
+      camState.targetX = 0;
+      camState.targetY = 0.04;
       camState.roll = 0;
     },
     dispose() {

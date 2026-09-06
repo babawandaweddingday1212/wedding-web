@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-// GSAP 只取 core：這兩段動畫補間的都是純 JS 物件（uniform、material、
-// Object3D 的位置與縮放），完全沒有碰 DOM 樣式，所以用不到預設進入點會
-// 一併帶進來的 CSSPlugin。power / back 這些 ease 本來就在 core 裡。
+// GSAP 只取 core：這段動畫補間的都是純 JS 物件（uniform、material、Object3D
+// 的位置與縮放），完全沒有碰 DOM 樣式，所以用不到預設進入點會一併帶進來的
+// CSSPlugin。power / back 這些 ease 本來就在 core 裡。
 import gsap from 'gsap/gsap-core';
 import { createMatrixRain } from '../utils/matrixRain.js';
 import { samplePhotoParticles } from '../utils/photoParticles.js';
@@ -10,16 +10,20 @@ import { createGlyphAtlas } from '../utils/glyphAtlas.js';
 /**
  * 男方賓客動畫 —— 工程師：程式碼變成照片
  *
- * 全長 4.6 秒，沒有任何文字說明 —— 該看懂的是畫面本身：
- *   0.0s 綠色字元從上方落下，鏡頭在遠處、偏一側
- *   0.6s 字元聚合成照片的形狀，密度一路長滿
- *   1.8s 字縮成圓點，五官解析出來
- *   2.4s 駭客綠褪去，還原照片原色；鏡頭同時推進、擺正
- *   3.6s 兩人之間浮出心形
+ * 全長 4.6 秒，沒有任何文字說明：
+ *   0.0s 幾萬個綠色字元從 3D 空間的深處往畫面中央飛，有的從鏡頭旁邊擦過去
+ *   1.5s 它們各自落到自己在合照裡的像素位置，畫面慢慢認得出是兩個人
+ *   2.2s 字縮成點、駭客綠褪回原色，照片同時依亮度長出浮雕厚度
+ *   3.5s 鏡頭繞回正面，兩人之間的心形自己描出來
  *
- * 鏡頭是這段的骨架：一路從側後方推進到正面，速度先快後慢（power2.out），
- * 加上極小幅的手持浮動。原本是固定機位只靠滑鼠視差，畫面會像一張會亮的
- * 桌布而不是一顆鏡頭。
+ * 這段的主要視覺是「前後」：
+ *   - 起點是以自己的目標位置為圓心往隨機方向推開 5~24 個世界單位，方向
+ *     刻意壓在 z 軸上，所以多數粒子是從深處或鏡頭後方飛來，不是在同一個
+ *     平面上左右移動
+ *   - 飛行中的字元放大 4.2 倍再縮回像素大小 —— 照片像素只有 0.03 個世界
+ *     單位，飛在二十個單位外投影出來不到一個像素，不放大整群都看不見
+ *   - 遠處的粒子連透明度一起壓下去。每顆一樣亮的話，再深的景深也會讀成
+ *     一片平面
  *
  * @param {HTMLElement} container
  * @param {{ onProgress:(pct:number)=>void, onReady:()=>void, photo?:HTMLImageElement }} callbacks
@@ -42,35 +46,18 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
   glCanvas.style.zIndex = '1';
   container.appendChild(glCanvas);
 
+  // 數位雨只是背景質感，強度壓低 —— 前景那群粒子才是主角
   const rain = createMatrixRain(rainCanvas, { color: '#39ff88' });
-  rain.setIntensity(0.55);
+  rain.setIntensity(0.22);
 
   // ---------- Three.js 基本設定 ----------
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
-  camera.position.set(0, 0, 8);
+  const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 200);
 
   const renderer = new THREE.WebGLRenderer({ canvas: glCanvas, alpha: true, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
-  // ---------- 粒子與背景素材 ----------
   const atlas = createGlyphAtlas();
-
-  function createVignetteTexture() {
-    const size = 256;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-    grad.addColorStop(0, 'rgba(0,6,3,0.75)');
-    grad.addColorStop(0.55, 'rgba(0,6,3,0.45)');
-    grad.addColorStop(1, 'rgba(0,6,3,0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, size, size);
-    return new THREE.CanvasTexture(canvas);
-  }
-  const vignetteTexture = createVignetteTexture();
 
   // ---------- 從合照取樣出粒子影像 ----------
   // 粒子密度直接決定「認不認得出是誰」：cols 230 在 2:3 直幅照片上
@@ -79,26 +66,52 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
   const sampled = photo ? samplePhotoParticles(photo, { cols: 230 }) : null;
   const photoWidth = sampled ? PHOTO_HEIGHT * sampled.aspect : 4.2;
 
-  const vignetteGeo = new THREE.PlaneGeometry(photoWidth * 1.5, PHOTO_HEIGHT * 1.18);
-  const vignetteMat = new THREE.MeshBasicMaterial({
-    map: vignetteTexture,
+  // 兩人臉中間的空隙，心形長在這裡
+  const HEART_ANCHOR = { nx: -0.06, ny: 0.5 };
+  const heartX = HEART_ANCHOR.nx * (photoWidth / 2);
+  const heartY = HEART_ANCHOR.ny * (PHOTO_HEIGHT / 2);
+
+  // ---------- 襯在粒子後面的暗場 ----------
+  function createScrimTexture() {
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    grad.addColorStop(0, 'rgba(0,10,5,0.82)');
+    grad.addColorStop(0.55, 'rgba(0,8,4,0.5)');
+    grad.addColorStop(1, 'rgba(0,6,3,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(canvas);
+  }
+  const scrimTexture = createScrimTexture();
+  const scrimGeo = new THREE.PlaneGeometry(photoWidth * 1.6, PHOTO_HEIGHT * 1.22);
+  const scrimMat = new THREE.MeshBasicMaterial({
+    map: scrimTexture,
     transparent: true,
     depthWrite: false,
     opacity: 0,
   });
-  const vignetteMesh = new THREE.Mesh(vignetteGeo, vignetteMat);
-  vignetteMesh.position.set(0, 0, -1.1);
-  scene.add(vignetteMesh);
+  const scrim = new THREE.Mesh(scrimGeo, scrimMat);
+  scrim.position.set(0, 0, -1.6);
+  scene.add(scrim);
 
   const uniforms = {
-    uAssemble: { value: 0 },
-    uReveal: { value: 0.04 },
-    uGlyphMix: { value: 0 },
-    uColorMix: { value: 0 },
+    uAssemble: { value: 0 }, // 從飛來的位置聚合到照片位置
+    uReveal: { value: 0.05 }, // 已經出現的粒子比例
+    uGlyphMix: { value: 0 }, // 字元 → 圓點
+    uColorMix: { value: 0 }, // 駭客綠 → 照片原色
+    // 起伏幅度。一開始就有，而且刻意誇張 —— 影像還沒成形的時候，
+    // 整片點雲像一塊在空間裡飄的布，前後起伏近三個世界單位
+    // （照片本身高 6.4），鏡頭一動就明顯錯位。
+    // 收尾時補間回 0：最後定下來的必須是一張平的照片。
+    uRelief: { value: 1.9 },
+    uTime: { value: 0 },
     uAtlas: { value: atlas.texture },
     uAtlasCols: { value: atlas.cols },
-    uSpacing: { value: 0.02 },
-    uGlyphScale: { value: 1.45 },
+    uGlyph: { value: 0.05 },
     uDotSize: { value: 0.03 },
     uScale: { value: 500 },
   };
@@ -115,8 +128,9 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
     uniform float uAssemble;
     uniform float uReveal;
     uniform float uGlyphMix;
-    uniform float uSpacing;
-    uniform float uGlyphScale;
+    uniform float uRelief;
+    uniform float uTime;
+    uniform float uGlyph;
     uniform float uDotSize;
     uniform float uScale;
     uniform float uAtlasCols;
@@ -125,30 +139,55 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
     varying vec3 vGreenColor;
     varying vec2 vCell;
     varying float vAlpha;
+    varying float vDepth;
 
     void main() {
       float p = clamp((uAssemble - aDelay) / max(0.0001, 1.0 - aDelay), 0.0, 1.0);
-      float eased = 1.0 - pow(1.0 - p, 3.0);
-      vec4 mv = modelViewMatrix * vec4(mix(aStart, aTarget, eased), 1.0);
-      gl_Position = projectionMatrix * mv;
+      // 進場用強一點的 ease-out：飛來的那段要快，靠近定位時才慢下來
+      float eased = 1.0 - pow(1.0 - p, 4.0);
 
-      // 只有「已出現」的粒子看得見；uReveal 由小變大，文字就由稀疏長成整張照片
+      vec3 target = aTarget;
+
+      // 起伏刻意「跟畫面內容無關」：用位置驅動的三道行進波，不是亮度。
+      // 依亮度推的話，亮的地方（臉、手臂）會整片凸出來，看起來像人臉
+      // 從照片裡浮出來 —— 那不是我們要的。改用波之後，相鄰的點是一起
+      // 動的，整片讀起來是一塊在空間裡飄的布，臉不會變形。
+      float wave =
+        sin(aTarget.x * 1.15 + uTime * 0.9) * 0.62 +
+        sin(aTarget.y * 0.80 - uTime * 0.70) * 0.50 +
+        sin((aTarget.x + aTarget.y) * 0.55 + uTime * 1.30) * 0.34;
+      // 疊一點點per-particle 的雜訊，讓布面不會完全平滑得像塑膠
+      wave += (aRand - 0.5) * 0.18;
+      target.z += wave * uRelief;
+
+      vec3 pos = mix(aStart, target, eased);
+
       vAlpha = step(aRand, uReveal);
 
-      // 字元尺寸隨密度反向縮放，讓螢幕覆蓋率維持恆定：
-      // 少量字元時每個都很大很清楚，全部出現時自動縮小，畫面才不會糊成一片
-      float density = max(uReveal, 0.02);
-      float glyphSize = uSpacing / sqrt(density) * uGlyphScale;
-      float worldSize = mix(glyphSize, uDotSize, uGlyphMix);
-      gl_PointSize = worldSize * uScale / max(0.001, -mv.z);
+      vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+      gl_Position = projectionMatrix * mv;
 
-      // 點與點之間會露出背景，點雲整體一定比原圖暗一階；
-      // 這裡補回來，收尾那張照片才不會比原照片沉。
+      // 距離衰減。飛在遠處的粒子要暗下去，前後才拉得開 ——
+      // 每顆點一樣亮的話，再深的景深也會讀成一片平面。
+      vDepth = smoothstep(-30.0, -6.0, mv.z);
+
+      // 飛行中的字元要比它在照片裡的尺寸大得多。照片像素的尺寸只有
+      // 0.03 個世界單位，飛在二十個單位外時投影出來不到一個像素 ——
+      // 等於整群粒子在遠處是看不見的。所以飛行階段放大，抵達的過程中
+      // 再縮回像素大小，那個「由大縮小」本身就是落定的動作。
+      float glyphNow = mix(uGlyph * 4.2, uGlyph, eased);
+      float world = mix(glyphNow, uDotSize, uGlyphMix);
+      gl_PointSize = world * uScale / max(0.001, -mv.z);
+
       vPhotoColor = min(aPhotoColor * 1.38, vec3(1.0));
 
-      // 駭客綠由亮度驅動；高光往白綠偏，但幅度壓在 0.35 避免整張泛白
-      float hl = aLum * aLum * 0.35;
-      vGreenColor = vec3((0.224 + hl) * aLum, aLum, (0.533 + hl * 0.6) * aLum);
+      // 駭客綠由亮度驅動。還在飛的粒子亮度不能用照片亮度 —— 這張合照
+      // 多數像素亮度低於 0.15，飛在半空中會整片看不見。飛行途中用終端機
+      // 該有的亮度，落定的過程再收斂回它真正的亮度。
+      float flying = 1.0 - eased;
+      float lum = mix(aLum, 0.45 + 0.45 * aRand, flying);
+      float hl = lum * lum * 0.35;
+      vGreenColor = vec3((0.224 + hl) * lum, lum, (0.533 + hl * 0.6) * lum);
 
       vCell = vec2(mod(aGlyph, uAtlasCols), floor(aGlyph / uAtlasCols));
     }
@@ -164,6 +203,7 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
     varying vec3 vGreenColor;
     varying vec2 vCell;
     varying float vAlpha;
+    varying float vDepth;
 
     void main() {
       if (vAlpha < 0.5) discard;
@@ -177,7 +217,11 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
       float a = mix(glyphA, dotA, uGlyphMix);
       if (a < 0.02) discard;
 
-      gl_FragColor = vec4(mix(vGreenColor, vPhotoColor, uColorMix), a);
+      vec3 col = mix(vGreenColor, vPhotoColor, uColorMix);
+
+      // 遠處的粒子連透明度一起壓下去，景深才夠明顯
+      float depthFade = 0.34 + 0.66 * vDepth;
+      gl_FragColor = vec4(col, a * depthFade);
     }
   `;
 
@@ -194,18 +238,24 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
 
     const halfW = photoWidth / 2;
     const halfH = PHOTO_HEIGHT / 2;
+    const dir = new THREE.Vector3();
 
     for (let i = 0; i < count; i++) {
       const ix = i * 3;
       aTarget[ix] = nx[i] * halfW;
       aTarget[ix + 1] = ny[i] * halfH;
-      // 只給極小的景深抖動：值一大，照片細節就會在視覺上糊掉
-      aTarget[ix + 2] = (Math.random() - 0.5) * 0.16;
+      aTarget[ix + 2] = (Math.random() - 0.5) * 0.1;
 
-      // 起始位置：像數位雨一樣從畫面上方隨機落下
-      aStart[ix] = (Math.random() - 0.5) * 9;
-      aStart[ix + 1] = 7 + Math.random() * 9;
-      aStart[ix + 2] = (Math.random() - 0.5) * 4;
+      // 起點：以自己的目標位置為圓心，往一個隨機方向推開 5~24 個單位。
+      // 方向刻意壓扁在 z 軸上（乘 1.8），大部分粒子因此是從深處或從
+      // 鏡頭後方飛過來的，而不是在同一個平面上左右移動 —— 那才有前後。
+      dir
+        .set(Math.random() - 0.5, Math.random() - 0.5, (Math.random() - 0.5) * 1.8)
+        .normalize();
+      const dist = 5 + Math.pow(Math.random(), 0.75) * 19;
+      aStart[ix] = aTarget[ix] + dir.x * dist;
+      aStart[ix + 1] = aTarget[ix + 1] + dir.y * dist;
+      aStart[ix + 2] = aTarget[ix + 2] + dir.z * dist;
 
       aPhotoColor[ix] = rgb[ix];
       aPhotoColor[ix + 1] = rgb[ix + 1];
@@ -214,12 +264,13 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
       aLum[i] = lum[i];
       aGlyph[i] = Math.floor(Math.random() * atlas.count);
       aRand[i] = Math.random();
-      // 由上往下掃描式落點，讀起來像逐行解碼
-      aDelay[i] = (1 - (ny[i] + 1) / 2) * 0.25 + Math.random() * 0.3;
+      // 抵達時間拉得很開：畫面上永遠同時有「剛出發的」和「快到位的」，
+      // 聚合才不是一次到齊的整齊動作
+      aDelay[i] = Math.pow(Math.random(), 1.4) * 0.72;
     }
 
     const geometry = new THREE.BufferGeometry();
-    // position 只是給 three.js 算 draw range 用，實際座標由 aStart/aTarget 在 shader 內插
+    // position 只是給 three.js 算 draw range 用，實際座標由 shader 內插
     geometry.setAttribute('position', new THREE.BufferAttribute(aTarget.slice(), 3));
     geometry.setAttribute('aStart', new THREE.BufferAttribute(aStart, 3));
     geometry.setAttribute('aTarget', new THREE.BufferAttribute(aTarget, 3));
@@ -229,9 +280,9 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
     geometry.setAttribute('aGlyph', new THREE.BufferAttribute(aGlyph, 1));
     geometry.setAttribute('aRand', new THREE.BufferAttribute(aRand, 1));
 
-    // 粒子間距（世界單位）決定字元的基準大小
-    uniforms.uSpacing.value = PHOTO_HEIGHT / rows;
-    uniforms.uDotSize.value = (PHOTO_HEIGHT / rows) * 1.55;
+    const spacing = PHOTO_HEIGHT / rows;
+    uniforms.uGlyph.value = spacing * 1.85;
+    uniforms.uDotSize.value = spacing * 1.55;
 
     const material = new THREE.ShaderMaterial({
       uniforms,
@@ -250,28 +301,25 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
     points.frustumCulled = false;
     scene.add(points);
 
-    return { points, geometry, material, count };
+    return { points, geometry, material };
   }
 
-  // 照片載入失敗時不讓整段動畫崩掉：數位雨與愛心仍會照常演出
+  // 照片載入失敗時不讓整段動畫崩掉：數位雨與心形仍會照常演出
   const cloud = sampled ? buildPhotoPoints(sampled) : null;
 
-  // ---------- 相機取景 ----------
-  // 照片要「大一點」，但在手機直式畫面上不能被裁掉，
-  // 因此每次 resize 都依高度與寬度兩個方向重算「剛好裝得下」的距離。
-  // 實際機位由下面的 camState 以這個距離為基準推算，resize 時鏡頭運動
-  // 不會被打斷。
+  // ---------- 相機 ----------
+  // fitCamera 只算「照片剛好裝得下」的距離，實際機位由 camState 以它為基準
+  // 推算，所以轉向或改視窗大小都不會打斷運鏡。
   let fitDistance = 8;
   function fitCamera() {
     const halfFov = THREE.MathUtils.degToRad(camera.fov) / 2;
     const distForHeight = (PHOTO_HEIGHT * 0.5) / Math.tan(halfFov);
     const distForWidth = (photoWidth * 0.5) / (Math.tan(halfFov) * camera.aspect);
-    fitDistance = Math.max(distForHeight, distForWidth) * 1.1;
+    fitDistance = Math.max(distForHeight, distForWidth) * 1.08;
   }
 
-  // 鏡頭狀態：dolly 是距離倍率，swing 是水平擺角（弧度），
-  // lift 是高度，roll 是鏡頭自身的傾斜。四個值都由時間軸補間。
-  const camState = { dolly: 1.42, swing: 0.34, lift: 0.85, roll: 0.055 };
+  // dolly 是距離倍率，swing 是水平擺角（弧度），lift 是高度，roll 是鏡頭傾斜
+  const camState = { dolly: 1.5, swing: -0.42, lift: 0.5, roll: 0.05 };
 
   function resize() {
     const w = container.clientWidth;
@@ -286,18 +334,15 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
   resize();
   window.addEventListener('resize', resize);
 
-  // ---------- 兩人臉之間的連結愛心線 ----------
-  // 錨點取在照片上兩張臉中間的空隙（正規化座標，y 向上為正），
-  // 這樣愛心不會壓到任何一張臉。
-  const HEART_ANCHOR = { nx: -0.06, ny: 0.5 };
+  // ---------- 兩人臉之間的心形 ----------
   const HEART_SIZE = 0.5;
-  const heartX = HEART_ANCHOR.nx * (photoWidth / 2);
-  const heartY = HEART_ANCHOR.ny * (PHOTO_HEIGHT / 2);
+  const HEART_SEGMENTS = 96;
 
-  function heartPoints(segments = 80) {
+  function heartPoints(segments) {
     const pts = [];
+    // 從最下方的尖端起筆，兩邊才會對稱地描上去
     for (let i = 0; i <= segments; i++) {
-      const t = (i / segments) * Math.PI * 2;
+      const t = Math.PI + (i / segments) * Math.PI * 2;
       const x = 16 * Math.pow(Math.sin(t), 3);
       const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
       pts.push(new THREE.Vector3((x / 16) * HEART_SIZE, (y / 16) * HEART_SIZE, 0));
@@ -305,20 +350,22 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
     return pts;
   }
 
-  const heartGeometry = new THREE.BufferGeometry().setFromPoints(heartPoints());
+  const heartGeometry = new THREE.BufferGeometry().setFromPoints(heartPoints(HEART_SEGMENTS));
   const heartMaterial = new THREE.LineBasicMaterial({
     color: 0xffffff,
     transparent: true,
     opacity: 0,
   });
-  const heartLine = new THREE.LineLoop(heartGeometry, heartMaterial);
-  heartLine.position.set(heartX, heartY, 0.4);
-  heartLine.scale.set(0, 0, 0);
+  // 用 Line 而不是 LineLoop：搭配 setDrawRange 就能讓線條「描出來」。
+  // 縮放彈出（back.out）那種做法太像 UI 元件跳出來，線條自己描一圈才像手寫。
+  const heartLine = new THREE.Line(heartGeometry, heartMaterial);
+  heartLine.position.set(heartX, heartY, 0.5);
+  heartGeometry.setDrawRange(0, 0);
   scene.add(heartLine);
+  const heartDraw = { progress: 0 };
 
-  // 心形背後的光暈。原本是一顆不透明的小球，疊在照片上就是一塊
-  // 綠色的實心多邊形 —— 看起來像貼了張色紙。改成一張加法混合的
-  // 徑向漸層貼片：亮度會加進背後的粒子而不是把它們蓋掉，才是「發光」。
+  // 心形背後的光暈。加法混合的柔光貼片 —— 不透明的球疊在照片上
+  // 只會是一塊實心多邊形，那是貼色紙不是發光。
   function createGlowTexture() {
     const size = 128;
     const c = document.createElement('canvas');
@@ -327,14 +374,14 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
     const x = c.getContext('2d');
     const g = x.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
     g.addColorStop(0, 'rgba(150,255,200,0.9)');
-    g.addColorStop(0.35, 'rgba(57,255,136,0.35)');
+    g.addColorStop(0.35, 'rgba(57,255,136,0.32)');
     g.addColorStop(1, 'rgba(57,255,136,0)');
     x.fillStyle = g;
     x.fillRect(0, 0, size, size);
     return new THREE.CanvasTexture(c);
   }
   const glowTexture = createGlowTexture();
-  const glowGeometry = new THREE.PlaneGeometry(1.6, 1.6);
+  const glowGeometry = new THREE.PlaneGeometry(1.7, 1.7);
   const glowMaterial = new THREE.MeshBasicMaterial({
     map: glowTexture,
     transparent: true,
@@ -342,93 +389,107 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
-  const glowSphere = new THREE.Mesh(glowGeometry, glowMaterial);
-  glowSphere.position.set(heartX, heartY, -0.4);
-  scene.add(glowSphere);
+  const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+  glow.position.set(heartX, heartY, -0.5);
+  scene.add(glow);
 
-  // ---------- 動畫時間軸 ----------
-  const state = { mouseX: 0, mouseY: 0 };
+  // ---------- 時間軸 ----------
+  const pointer = { x: 0, y: 0, tx: 0, ty: 0 };
   const clock = new THREE.Clock();
   let disposed = false;
 
-  const handleMouseMove = (e) => {
+  const handlePointerMove = (e) => {
     const rect = container.getBoundingClientRect();
-    state.mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-    state.mouseY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+    pointer.tx = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+    pointer.ty = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
   };
-  container.addEventListener('mousemove', handleMouseMove);
+  container.addEventListener('mousemove', handlePointerMove);
 
   const tl = gsap.timeline({
     onUpdate: () => onProgress(Math.round(tl.progress() * 100)),
   });
 
-  // 全長 4.6 秒。四條線刻意大量重疊 —— 一段一段等它跑完就會拖成十秒，
-  // 而「聚合」「解析」「上色」本來就可以同時發生。
-  tl.to(uniforms.uAssemble, { value: 1, duration: 2.4, ease: 'power2.out' }, 0)
-    .to(uniforms.uReveal, { value: 1, duration: 2.0, ease: 'power1.inOut' }, 0.1)
-    // 字縮成圓點，照片的細節這時才真正浮現
-    .to(uniforms.uGlyphMix, { value: 1, duration: 1.5, ease: 'power2.inOut' }, 1.5)
-    // 綠色褪去，還原照片原本的顏色
-    .to(uniforms.uColorMix, { value: 1, duration: 1.6, ease: 'power1.inOut' }, 2.2)
-    .to(vignetteMat, { opacity: 0.82, duration: 1.4, ease: 'power1.out' }, 0.5)
-    .call(() => rain.setIntensity(0.26), [], 0.5)
-    .call(() => rain.setIntensity(0.1), [], 2.4)
-    // 鏡頭：從側後方推進到正面。它比任何一條資料線都長，
-    // 收尾那一段的「還在慢慢靠近」就是整段的呼吸。
-    .to(camState, { dolly: 1.0, duration: 4.4, ease: 'power2.out' }, 0)
-    .to(camState, { swing: 0.02, duration: 4.4, ease: 'power2.inOut' }, 0)
-    .to(camState, { lift: 0, duration: 4.0, ease: 'power2.inOut' }, 0)
-    .to(camState, { roll: 0, duration: 3.4, ease: 'power1.inOut' }, 0.4)
-    // 心形收尾
-    .to(heartMaterial, { opacity: 0.9, duration: 0.5, ease: 'power1.out' }, 3.5)
-    .to(heartLine.scale, { x: 1, y: 1, z: 1, duration: 0.7, ease: 'back.out(2)' }, 3.5)
-    .to(glowMaterial, { opacity: 0.3, duration: 0.7, ease: 'power1.out' }, 3.6)
+  tl
+    // 1) 一大群字元從深處飛來，各自落到自己的像素位置
+    .to(uniforms.uAssemble, { value: 1, duration: 2.9, ease: 'power1.inOut' }, 0)
+    .to(uniforms.uReveal, { value: 1, duration: 0.9, ease: 'power1.out' }, 0)
+    .to(scrimMat, { opacity: 0.88, duration: 1.6, ease: 'power1.out' }, 0.8)
+    .call(() => rain.setIntensity(0.1), [], 1.6)
+    // 2) 字縮成點、還原原色，同時長出浮雕厚度
+    .to(uniforms.uGlyphMix, { value: 1, duration: 1.1, ease: 'power2.inOut' }, 2.1)
+    .to(uniforms.uColorMix, { value: 1, duration: 1.2, ease: 'power1.inOut' }, 2.5)
+    // 厚度收回 0：影像完整之後留一拍讓人看見那個立體，才壓平 ——
+    // 那一下就是「從一團在空間裡的點，變成一張照片」
+    .to(uniforms.uRelief, { value: 0, duration: 1.25, ease: 'power2.inOut' }, 3.1)
+    // 3) 鏡頭：開場在遠處看著粒子飛，一路推進、擺正，收尾再緩緩繞回去一點，
+    //    那個「還在動」就是讓浮雕厚度被看見的關鍵
+    .to(camState, { dolly: 1.0, duration: 4.2, ease: 'power2.out' }, 0)
+    .to(camState, { swing: 0.18, duration: 3.0, ease: 'power1.inOut' }, 0)
+    .to(camState, { swing: -0.05, duration: 1.4, ease: 'power2.inOut' }, 3.0)
+    .to(camState, { lift: 0, duration: 3.4, ease: 'power2.inOut' }, 0)
+    .to(camState, { roll: 0, duration: 3.0, ease: 'power1.inOut' }, 0.3)
+    // 4) 心形自己描一圈
+    .to(heartDraw, { progress: 1, duration: 0.85, ease: 'power2.inOut' }, 3.4)
+    .to(heartMaterial, { opacity: 0.92, duration: 0.3, ease: 'power1.out' }, 3.4)
+    .to(glowMaterial, { opacity: 0.3, duration: 0.8, ease: 'power1.out' }, 3.5)
     .call(() => onReady(), [], 4.6);
 
   // ---------- Render Loop ----------
-  function animate() {
+  let lastTime = 0;
+  function animate(now) {
     if (disposed) return;
     const t = clock.getElapsedTime();
+    const dt = Math.min(0.05, (now - lastTime) / 1000 || 0.016);
+    lastTime = now;
+
+    uniforms.uTime.value = t;
+
+    heartGeometry.setDrawRange(0, Math.round(heartDraw.progress * (HEART_SEGMENTS + 1)));
     heartLine.rotation.z = Math.sin(t * 0.6) * 0.02;
-    glowSphere.scale.setScalar(0.94 + Math.sin(t * 2.4) * 0.06);
+    glow.scale.setScalar(0.94 + Math.sin(t * 2.4) * 0.06);
 
-    // 機位以照片中心為圓心：swing 是水平擺角，dolly 是距離倍率。
-    // 兩個不同週期的正弦當手持晃動 —— 幅度只有幾公分，目的是讓畫面
-    // 「不是完全靜止」，不是要讓人看出鏡頭在晃。
+    // 滑鼠視差要先平滑再用。直接把游標座標接到機位上沒有慣性，
+    // 讀起來是機械的；阻尼係數也必須跟著 dt 換算，否則 120Hz 螢幕的
+    // 收斂速度會是 60Hz 的兩倍。
+    const damp = 1 - Math.pow(0.0015, dt);
+    pointer.x += (pointer.tx - pointer.x) * damp;
+    pointer.y += (pointer.ty - pointer.y) * damp;
+
+    // 機位以照片中心為圓心。兩個不同週期的正弦當手持晃動 ——
+    // 幅度只有幾公分，目的是讓畫面不是完全靜止。
     const dist = fitDistance * camState.dolly;
-    const sway = Math.sin(t * 0.85) * 0.035 + Math.sin(t * 0.31) * 0.02;
-    const bob = Math.sin(t * 0.62) * 0.03;
+    const sway = Math.sin(t * 0.85) * 0.03 + Math.sin(t * 0.31) * 0.018;
+    const bob = Math.sin(t * 0.62) * 0.028;
 
-    // 滑鼠視差疊在運鏡之上，幅度壓得很小：照片是有細節的影像，
-    // 鏡頭晃太大會讓五官看起來在游動
-    const swing = camState.swing + state.mouseX * 0.05 + sway * 0.35;
+    const swing = camState.swing + pointer.x * 0.05 + sway * 0.35;
     camera.position.set(
       Math.sin(swing) * dist,
-      camState.lift + bob - state.mouseY * 0.12,
+      camState.lift + bob - pointer.y * 0.12,
       Math.cos(swing) * dist
     );
     camera.lookAt(0, camState.lift * 0.25, 0);
-    // 鏡頭自身的傾斜，收尾時歸零 —— 手持鏡頭很少是完全水平的
     camera.rotateZ(camState.roll + sway * 0.06);
 
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
   }
-  animate();
+  requestAnimationFrame(animate);
 
   return {
+    /** 跳到最後一格。開啟「減少動態效果」時由 pages/scene.js 直接呼叫。 */
     skipToEnd() {
       tl.progress(1);
       uniforms.uAssemble.value = 1;
       uniforms.uReveal.value = 1;
       uniforms.uGlyphMix.value = 1;
       uniforms.uColorMix.value = 1;
-      heartMaterial.opacity = 0.9;
-      heartLine.scale.set(1, 1, 1);
-      glowMaterial.opacity = 0.28;
-      vignetteMat.opacity = 0.82;
+      uniforms.uRelief.value = 0;
+      scrimMat.opacity = 0.88;
+      heartDraw.progress = 1;
+      heartMaterial.opacity = 0.92;
+      glowMaterial.opacity = 0.3;
       camState.dolly = 1;
-      camState.swing = 0.02;
+      camState.swing = -0.05;
       camState.lift = 0;
       camState.roll = 0;
       rain.setIntensity(0.1);
@@ -438,7 +499,7 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
       tl.kill();
       rain.destroy();
       window.removeEventListener('resize', resize);
-      container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('mousemove', handlePointerMove);
       if (cloud) {
         cloud.geometry.dispose();
         cloud.material.dispose();
@@ -449,9 +510,9 @@ export function createGroomScene(container, { onProgress, onReady, photo } = {})
       glowGeometry.dispose();
       glowMaterial.dispose();
       glowTexture.dispose();
-      vignetteGeo.dispose();
-      vignetteMat.dispose();
-      vignetteTexture.dispose();
+      scrimGeo.dispose();
+      scrimMat.dispose();
+      scrimTexture.dispose();
       renderer.dispose();
       if (rainCanvas.parentNode) rainCanvas.parentNode.removeChild(rainCanvas);
       if (glCanvas.parentNode) glCanvas.parentNode.removeChild(glCanvas);

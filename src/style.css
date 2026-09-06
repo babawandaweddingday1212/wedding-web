@@ -353,6 +353,12 @@ a {
   transform: translateY(-2px);
 }
 
+/* 按下去要有反應。手機沒有 hover，少了這個就完全不知道有沒有點到。 */
+.scene-skip:active {
+  transform: scale(0.97);
+  transition: transform 0.16s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
 .scene-page--groom .scene-skip {
   border-color: rgba(57, 255, 136, 0.5);
   font-family: var(--font-mono);
@@ -370,8 +376,13 @@ a {
 
 .scene-progress__bar {
   height: 100%;
-  width: 0%;
-  transition: width 0.15s linear;
+  /* 進度用 scaleX 推，不是 width —— 這個值每一幀都會被更新，
+     用 width 等於每幀重算一次版面。transform 只走合成。
+     也不要加 transition：每幀都在改目標值，補間永遠在重新導向，
+     只會讓進度條比實際進度慢半拍。 */
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
 }
 
 .scene-page--groom .scene-progress__bar {
@@ -384,47 +395,11 @@ a {
   box-shadow: 0 0 8px var(--color-blush);
 }
 
-.scene-continue {
-  pointer-events: auto;
-  position: absolute;
-  bottom: clamp(2.5rem, 8vh, 4.5rem);
-  left: 50%;
-  transform: translateX(-50%) translateY(10px);
-  padding: 0.9rem 2.4rem;
-  border-radius: 999px;
-  font-size: 0.95rem;
-  letter-spacing: 0.1em;
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+/* 離場：換頁前把整個場景淡掉。男方那段是全黑背景、資訊頁是米色，
+   直接抽掉會閃一格黑 → 米色。 */
+.scene-page.is-leaving {
   opacity: 0;
-  visibility: hidden;
-  backdrop-filter: blur(8px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
-}
-
-.scene-continue.is-visible {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(0);
-}
-
-.scene-page--groom .scene-continue {
-  font-family: var(--font-mono);
-  border-color: rgba(57, 255, 136, 0.6);
-  color: var(--color-green);
-}
-
-.scene-page--groom .scene-continue:hover {
-  background: rgba(57, 255, 136, 0.12);
-}
-
-.scene-page--bride .scene-continue {
-  font-family: var(--font-serif);
-}
-
-.scene-page--bride .scene-continue:hover {
-  background: rgba(255, 255, 255, 0.2);
+  transition: opacity 0.26s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 /* ============================================================
@@ -1338,8 +1313,7 @@ a {
   /* 觸控目標至少 44px，符合行動裝置的可點擊尺寸下限 */
   .side-btn,
   .form-submit,
-  .scene-skip,
-  .scene-continue {
+  .scene-skip {
     min-height: 44px;
   }
 
@@ -1383,20 +1357,15 @@ a {
   }
 }
 
-/* 橫放手機：高度很矮，過場動畫的字幕與按鈕容易疊在一起 */
+/* 橫放手機：高度很矮，過場動畫的疊層要收窄 */
 @media (max-height: 480px) and (orientation: landscape) {
   .scene-overlay {
     padding: 0.7rem 1rem;
   }
-
-  .scene-continue {
-    bottom: 1rem;
-    padding: 0.6rem 1.6rem;
-  }
 }
 
 /* 使用者若在系統開啟「減少動態效果」，關掉頁面轉場與位移動畫。
-   3D 過場本身有「略過動畫」按鈕，這裡不強制停用。 */
+   3D 過場則由 pages/scene.js 直接跳到最後一格（見那裡的說明）。 */
 @media (prefers-reduced-motion: reduce) {
   .page {
     animation: none;
@@ -1405,7 +1374,8 @@ a {
 
   .side-btn,
   .album__fullscreen,
-  .scene-skip {
+  .scene-skip,
+  .scene-page.is-leaving {
     transition: none;
   }
 }

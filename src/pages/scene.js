@@ -23,7 +23,6 @@ export function renderScene(root, side, onFinish) {
           </span>
         </div>
       </div>
-      <button class="scene-continue" id="scene-continue" type="button">進入婚禮資訊 →</button>
       <div class="scene-progress"><div class="scene-progress__bar" id="scene-progress-bar"></div></div>
       <div class="scene-loading" id="scene-loading" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:${
         isGroom ? '#39ff88' : '#8a3b46'
@@ -33,25 +32,33 @@ export function renderScene(root, side, onFinish) {
     </section>
   `;
 
+  // 開啟「減少動態效果」的人不該被塞一段 4.6 秒的全螢幕運鏡 + 粒子。
+  // 但也不是整段拿掉 —— 那樣他們會完全看不到這張合照。做法是直接跳到
+  // 最後一格：畫面該有的東西都在，只是沒有過程。
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   const sceneRoot = root.querySelector('#scene-root');
   const skipBtn = root.querySelector('#scene-skip');
-  const continueBtn = root.querySelector('#scene-continue');
   const progressBar = root.querySelector('#scene-progress-bar');
 
+  // 進度條用 scaleX 而不是 width：width 每一幀都會觸發 layout → paint，
+  // 而這個值是跟著動畫每一幀更新的，等於在 WebGL 每幀渲染旁邊再加一輪
+  // 版面計算。transform 只走合成，完全不碰版面。
   const handleProgress = (pct) => {
-    progressBar.style.width = `${pct}%`;
+    progressBar.style.transform = `scaleX(${pct / 100})`;
   };
 
   let finished = false;
   const handleReady = () => {
     if (finished) return;
-    continueBtn.classList.add('is-visible');
-    // 動畫播完後短暫停留，讓最後一格畫面留在眼睛裡，接著自動導向資訊頁。
-    // 動畫本身 4.6 秒，這裡再等太久就等於把它拖回原本的長度。
-    autoAdvanceTimeout = setTimeout(() => finish(), 700);
+    // 播完就換頁，中間不停留。動畫的最後一格本來就是資訊頁的前情提要，
+    // 停在那裡只會讓人以為卡住或又要再播一次。
+    // 減少動態效果的人是直接跳到最後一格的，給半秒讓那張畫面看得到。
+    autoAdvanceTimeout = setTimeout(() => finish(), prefersReducedMotion ? 500 : 0);
   };
 
   let autoAdvanceTimeout = null;
+  let fadeOutTimeout = null;
   let controller = null;
   let cancelled = false;
 
@@ -59,14 +66,17 @@ export function renderScene(root, side, onFinish) {
     if (finished) return;
     finished = true;
     clearTimeout(autoAdvanceTimeout);
-    onFinish(side);
+
+    // 換頁前先把整個場景淡掉。男方那段是全黑背景，資訊頁是米色，
+    // 直接抽掉會閃一格黑 → 米色。這裡等淡出跑完再導頁。
+    // 減少動態效果時不做淡出，直接換。
+    if (prefersReducedMotion) return onFinish(side);
+    sceneRoot.classList.add('is-leaving');
+    fadeOutTimeout = setTimeout(() => onFinish(side), 260);
   }
 
   const handleSkip = () => finish();
-  const handleContinue = () => finish();
-
   skipBtn.addEventListener('click', handleSkip);
-  continueBtn.addEventListener('click', handleContinue);
 
   const loaderEl = root.querySelector('#scene-loading');
   const loadScene = isGroom
@@ -88,14 +98,19 @@ export function renderScene(root, side, onFinish) {
       onReady: handleReady,
       photo,
     });
+    if (prefersReducedMotion) {
+      controller.skipToEnd();
+      handleProgress(100);
+      handleReady();
+    }
   });
 
   return () => {
     cancelled = true;
     finished = true;
     clearTimeout(autoAdvanceTimeout);
+    clearTimeout(fadeOutTimeout);
     skipBtn.removeEventListener('click', handleSkip);
-    continueBtn.removeEventListener('click', handleContinue);
     if (controller) controller.dispose();
   };
 }
