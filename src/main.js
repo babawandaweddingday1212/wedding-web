@@ -33,6 +33,29 @@ const SECTION_IDS = ['venue', 'transport', 'schedule', 'album', 'rsvp'];
 const app = document.querySelector('#app');
 let cleanupCurrentPage = null;
 let currentKey = null;
+let currentAnchor = null;
+
+/**
+ * 最後一次由網址明確指定過的賓客身份。
+ *
+ * #/album、#/rsvp 這種短網址不帶身份，如果直接讓 side 變成 null，
+ * key 就會在 `info:groom` 與 `info:` 之間跳動 —— 兩者被當成不同頁面，
+ * 於是在它們之間來回（iOS 左緣滑動返回／前進、按上一頁）會把整個
+ * 資訊頁重建一次：捲軸回到最上面、相簿也重來。
+ * 沿用上一次的身份，key 才穩定；表單的身份預選也一併保住。
+ */
+let lastSide = null;
+
+/**
+ * 這一次的 render 是不是由站內的程式導航觸發的（見 go()）。
+ *
+ * 只有程式導航才該把捲軸拉回頂端：首頁 → 動畫 → 資訊頁是一連串新畫面，
+ * 當然要從頭看起。
+ * 但上一頁／前進、以及重新整理，瀏覽器本來就會把那個歷史條目原本的
+ * 捲軸位置還原回來 —— 這時再自己捲到頂端，等於把使用者剛剛在看的位置
+ * 硬生生丟掉，那正是「網頁自己跳到最上面」的感覺。
+ */
+let isProgrammaticNav = false;
 
 /**
  * 把 hash 拆成「哪一頁 / 哪一側 / 捲到哪一段」。
@@ -67,8 +90,13 @@ function mount(renderFn, anchor) {
     cleanupCurrentPage();
     cleanupCurrentPage = null;
   }
-  // 有指定錨點就交給 scrollToSection 決定捲軸位置，不要先跳回頂端
-  if (!anchor) window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+  // 有指定錨點就交給 scrollToSection 決定捲軸位置，不要先跳回頂端；
+  // 不是程式導航（上一頁／前進／重新整理）也不要動，讓瀏覽器還原。
+  //
+  // 用兩個參數的舊寫法而不是 { behavior: 'instant' }：'instant' 要
+  // Safari 15.4 以後才認得，更舊的版本會因為無效的列舉值直接丟 TypeError。
+  // （全站沒有 scroll-behavior: smooth，所以這裡就是瞬間跳。）
+  if (!anchor && isProgrammaticNav) window.scrollTo(0, 0);
   cleanupCurrentPage = renderFn(app) || null;
 }
 
@@ -137,18 +165,31 @@ function go(path, replace = false) {
     if (replace) window.history.replaceState(null, '', target);
     else window.history.pushState(null, '', target);
   }
-  render();
+  isProgrammaticNav = true;
+  try {
+    render();
+  } finally {
+    isProgrammaticNav = false;
+  }
 }
 
 function render() {
-  const { name, side, anchor } = parseHash();
+  const parsed = parseHash();
+  const { name, anchor } = parsed;
+
+  // 網址有帶身份就記下來；沒帶就沿用上一次的（見 lastSide 的說明）
+  if (parsed.side) lastSide = parsed.side;
+  const side = parsed.side || lastSide;
+
   // 同一個畫面不重複掛載：programmatic 導航與 popstate/hashchange
   // 可能對同一次切換各觸發一次。
   // key 刻意不含 anchor —— 從 #/album 換到 #/rsvp 只需要捲動，
   // 不必把整頁（含相簿翻頁書）重建一次。
   const key = `${name}:${side || ''}`;
   const isSamePage = key === currentKey;
+  const anchorChanged = anchor !== currentAnchor;
   currentKey = key;
+  currentAnchor = anchor;
 
   switch (name) {
     case 'scene':
@@ -161,8 +202,17 @@ function render() {
 
     case 'info':
       if (!isSamePage) mount((root) => renderInfo(root, side), anchor);
-      if (anchor) scrollToSection(anchor);
-      else if (isSamePage) window.scrollTo({ top: 0, behavior: 'smooth' });
+      // 只有「這次真的換了錨點」或「整頁剛重建」才捲。
+      //
+      // 以前是只要 anchor 存在就捲，於是從 LINE 的 #/album 進來的人，
+      // 只要有任何一個 popstate 冒出來（iOS 從背景回到前景、邊緣手勢…），
+      // 正在看相簿的畫面就被拉回區塊頂端 —— 而且 scrollToSection 是個
+      // 最長 10 秒的輪詢迴圈，實測會連續攔截好幾次往下捲的動作。
+      //
+      // 另外，這裡刻意不再有「同一頁但沒有錨點 → 捲回頂端」那條分支：
+      // 站內沒有任何連結會導向不帶錨點的 #/info/*，唯一會走到那裡的是
+      // 上一頁／前進，而那時候把人拉回頂端只會讓人以為網頁自己跳掉了。
+      if (anchor && (anchorChanged || !isSamePage)) scrollToSection(anchor);
       break;
 
     default:
