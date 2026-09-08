@@ -1176,6 +1176,14 @@ a {
   height: 100%;
 }
 
+/* 真正交給 page-flip 的內層元素（見 utils/albumFlipbook.js 的說明）。
+   page-flip 的 destroy() 會把它移除，所以它是拋棄式的、每次重建都換一個新的；
+   #album-book 則永遠留在文件裡當穩定的容器。 */
+.album-stage {
+  width: 100%;
+  height: 100%;
+}
+
 /* page-flip 會把每一頁做成獨立圖層，圖片要填滿整頁 */
 .album-page {
   background: #fff;

@@ -64,6 +64,17 @@ export function createAlbumFlipbook(container, onPageChange = () => {}) {
   const media = window.matchMedia(SPREAD_QUERY);
 
   let flip = null;
+  /**
+   * 真正交給 page-flip 的元素，每次 build 都重新建一個。
+   *
+   * ⚠️ 不能把 container（#album-book）直接交給 page-flip —— 它的
+   * destroy() 是 `this.ui.destroy(), this.block.remove()`，會把你傳進去的
+   * 那個元素整個從 DOM 移除。手機一轉成橫式就會跨過斷點觸發重建，
+   * 於是 #album-book 連同相簿一起消失，之後每次 build() 都是在一個
+   * 脫離文件的元素上跑，轉回直式也救不回來（賓客回報的正是這個）。
+   * 給它一個用完即丟的內層元素，#album-book 就永遠留在文件裡。
+   */
+  let stage = null;
   let pageEls = [];
   let resizeObserver = null;
   let resizeRaf = 0;
@@ -108,7 +119,9 @@ export function createAlbumFlipbook(container, onPageChange = () => {}) {
 
     // 圖片網址放 data-src，只載目前附近的頁面 ——
     // 全部一次載是十幾 MB，手機上會等很久
-    container.innerHTML = pages
+    stage = document.createElement('div');
+    stage.className = 'album-stage';
+    stage.innerHTML = pages
       .map((p, i) => {
         // 跨頁的左右半：頁面比例與半張圖不完全相同，object-fit: cover
         // 一定會裁掉一些寬度。預設是左右均分裁切，那會吃掉接縫兩側的內容，
@@ -129,10 +142,11 @@ export function createAlbumFlipbook(container, onPageChange = () => {}) {
         </div>`;
       })
       .join('');
-    pageEls = [...container.querySelectorAll('.album-page')];
+    container.replaceChildren(stage);
+    pageEls = [...stage.querySelectorAll('.album-page')];
     preload(startIndex);
 
-    flip = new PageFlip(container, {
+    flip = new PageFlip(stage, {
       width: 420,
       height: 590,
       size: 'stretch',
@@ -161,7 +175,7 @@ export function createAlbumFlipbook(container, onPageChange = () => {}) {
     // 翻頁，這個時間窗是安全的。
     if (ignoreNextFlip) setTimeout(() => (ignoreNextFlip = false), 400);
 
-    // 觀察外層而非 container：container 是 page-flip 自己會改尺寸的元素，
+    // 觀察外層而非 stage：stage 是 page-flip 自己會改尺寸的元素，
     // 觀察它會變成「改尺寸 → update → 又改尺寸」的回饋迴圈，畫面會抖
     const host = container.parentElement ?? container;
     let lastW = 0;
@@ -197,9 +211,12 @@ export function createAlbumFlipbook(container, onPageChange = () => {}) {
     resizeObserver?.disconnect();
     resizeObserver = null;
     flip?.off('flip', handleFlip);
+    // destroy() 會把 stage 從 DOM 移除，那正是我們要的 —— 它是拋棄式的。
     flip?.destroy();
     flip = null;
-    container.innerHTML = '';
+    stage = null;
+    // 保險：萬一哪個版本的 page-flip 沒移除 stage，這裡收乾淨
+    container.replaceChildren();
   }
 
   // 跨越斷點時整個重建 —— 兩種模式用的是不同的頁序，
