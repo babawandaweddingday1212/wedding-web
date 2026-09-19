@@ -40,7 +40,14 @@ const COLUMNS = [
   ['printedInvite', '紙本喜帖'],
   ['address', '寄送地址'],
   ['message', '祝福的話'],
+  // ⚠️ 放在最後一欄，既有的試算表加上這欄也不會錯位。
+  // 前端自動重試（冷啟動那次 404 其實已經寫進來了）會送來同一個編號，
+  // 靠它擋掉重複的列。
+  ['_submissionId', '提交編號'],
 ];
+
+/** 提交編號在第幾欄（1-based） */
+const ID_COLUMN = COLUMNS.length;
 
 /** 把前端的代碼翻成中文，試算表才看得懂 */
 const LABELS = {
@@ -72,6 +79,13 @@ function doPost(e) {
     }
 
     const sheet = getSheet_();
+
+    // 同一個編號已經寫過 = 這是重送，不是第二筆回覆。
+    // 回 ok 讓前端顯示成功（上一次其實就成功了，只是回程壞掉）。
+    if (data._submissionId && findRowBySubmissionId_(sheet, String(data._submissionId))) {
+      return jsonOutput_({ ok: true, duplicate: true });
+    }
+
     const row = COLUMNS.map(function (col) {
       const key = col[0];
       if (key === '_timestamp') return new Date();
@@ -94,6 +108,17 @@ function doGet() {
   return jsonOutput_({ ok: true, service: 'wedding-rsvp' });
 }
 
+/** 找得到同編號的列就回 true。表單筆數是一場婚禮的量，整欄讀進來就夠 */
+function findRowBySubmissionId_(sheet, id) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return false;
+  const ids = sheet.getRange(2, ID_COLUMN, lastRow - 1, 1).getValues();
+  for (let i = 0; i < ids.length; i += 1) {
+    if (String(ids[i][0]) === id) return true;
+  }
+  return false;
+}
+
 function getSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(SHEET_NAME);
@@ -107,6 +132,14 @@ function getSheet_() {
       })
     );
     sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, COLUMNS.length).setFontWeight('bold');
+  } else if (sheet.getLastColumn() < COLUMNS.length) {
+    // 這份試算表是「提交編號」這欄加進來之前建的，補上標題
+    sheet.getRange(1, 1, 1, COLUMNS.length).setValues([
+      COLUMNS.map(function (col) {
+        return col[1];
+      }),
+    ]);
     sheet.getRange(1, 1, 1, COLUMNS.length).setFontWeight('bold');
   }
   return sheet;

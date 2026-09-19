@@ -28,24 +28,34 @@ let Swal = null;
  * JSON）。那是 Google 端的暖機行為，不是賓客填錯，直接顯示「送出失敗」
  * 等於把第一個來填表的人擋在門外。
  *
- * 重試只在「HTTP 錯誤或連線失敗」時進行 —— 這兩種情況腳本多半根本
- * 沒被執行到，重送不會在試算表寫出兩列。腳本正常回應（不論 ok 與否）
- * 就不再重送。
+ * 重試只在「HTTP 錯誤或連線失敗」時進行。⚠️ 但「沒收到正常回應」不等於
+ * 「腳本沒跑到」—— 冷啟動那次 404，腳本其實已經執行、已經寫進試算表了，
+ * 只是回程壞掉。所以重送必須是冪等的：payload 帶一個 _submissionId，
+ * 同一次送出的三次嘗試共用同一個 id，Apps Script 端看到重複的 id 就
+ * 直接回 ok 不再寫一列（見 google-apps-script/rsvp.gs）。少了這個，
+ * 賓客按一次送出會在試算表看到兩筆一模一樣的資料。
+ *
+ * 每次嘗試也有 15 秒上限：冷啟動最慢約十秒出頭，超過這個數字通常是
+ * 回程已經斷了，繼續等只是讓賓客多盯著「送出中…」。
  *
  * @param {string} endpoint - Apps Script 的 /exec 網址
- * @param {object} payload
+ * @param {object} payload - 必須含 _submissionId
  * @returns {Promise<boolean>} 是否確定寫入成功
  */
 async function submitToEndpoint(endpoint, payload) {
   const RETRY_DELAYS = [800, 2500]; // 最多送三次
+  const ATTEMPT_TIMEOUT = 15000;
 
   for (let attempt = 0; ; attempt += 1) {
+    const abort = new AbortController();
+    const timer = window.setTimeout(() => abort.abort(), ATTEMPT_TIMEOUT);
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload),
         redirect: 'follow', // Apps Script 會 302 轉到 googleusercontent.com
+        signal: abort.signal,
       });
 
       if (res.ok) {
@@ -57,6 +67,8 @@ async function submitToEndpoint(endpoint, payload) {
       console.warn(`RSVP 送出失敗（HTTP ${res.status}），第 ${attempt + 1} 次`);
     } catch (err) {
       console.warn(`RSVP 送出失敗（連線錯誤），第 ${attempt + 1} 次`, err);
+    } finally {
+      window.clearTimeout(timer);
     }
 
     if (attempt >= RETRY_DELAYS.length) return false;
@@ -299,6 +311,15 @@ export function initRsvpForm(root) {
   const submitLabel = submitBtn.querySelector('.form-submit__label');
   let sending = false;
 
+  // 這一「筆」回覆的編號，送出成功前都不變 —— 不只自動重試共用它，
+  // 賓客看到失敗後自己再按一次也共用（那次失敗很可能其實已經寫進去了）。
+  // 寫入成功才換下一個編號，讓同一個人想再回覆一次時算新的一筆。
+  let submissionId = null;
+  function nextSubmissionId() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
   function setSending(on) {
     sending = on;
     submitBtn.disabled = on;
@@ -321,6 +342,8 @@ export function initRsvpForm(root) {
     // 補成明確的 yes/no，試算表的欄位才不會忽有忽無。
     data.childSeat = childSeatInput.checked ? 'yes' : 'no';
     data.printedInvite = printedInput.checked ? 'yes' : 'no';
+    if (!submissionId) submissionId = nextSubmissionId();
+    data._submissionId = submissionId;
 
     setSending(true);
     if (weddingData.rsvpEndpoint) {
@@ -349,6 +372,7 @@ export function initRsvpForm(root) {
 
     const attending = form.querySelector('input[name="attending"]:checked')?.value === 'yes';
 
+    submissionId = null; // 這一筆已經落地，下次送出算新的一筆
     setSending(false);
     await swalReady;
     form.reset();
