@@ -162,15 +162,6 @@ export function renderInfo(root, side) {
         </div>
       </section>
 
-      <section class="info__section" id="rsvp">
-        <h2 class="section-title">立即回覆出席</h2>
-        <p class="info__cta-text">
-          為了提供您美好的饗宴，請於 <b>${weddingData.rsvpDeadline}</b> 前撥空完成表單。<br />
-          若需要紙本喜帖，歡迎您在表單裡留下寄送地址，期待我們精美的喜帖。
-        </p>
-        ${rsvpFormMarkup(side)}
-      </section>
-
       <footer class="info__footer">
         ${weddingData.title} · ${weddingData.dateDisplay}
       </footer>
